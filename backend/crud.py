@@ -1,0 +1,206 @@
+import uuid
+import hashlib
+import datetime
+from sqlalchemy.orm import Session
+from backend.models import User, QuantumCircuitModel, StudentProgressModel, BadgeModel, CohortAttemptModel
+
+def _hash_pass(password: str) -> str:
+    return hashlib.sha256(password.encode('utf-8')).hexdigest()
+
+def verify_password(password: str, hashed: str) -> bool:
+    return _hash_pass(password) == hashed
+
+def get_user_by_email(db: Session, email: str):
+    return db.query(User).filter(User.email == str(email).lower().strip()).first()
+
+def create_user_account(db: Session, email: str, password: str, full_name: str, background: str = "cs-undergrad", role: str = "student"):
+    email_clean = str(email).lower().strip()
+    existing = get_user_by_email(db, email_clean)
+    if existing:
+        return existing
+
+    hashed = _hash_pass(password)
+    db_user = User(
+        email=email_clean,
+        password_hash=hashed,
+        full_name=full_name,
+        user_background=background,
+        role=role
+    )
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+def authenticate_user(db: Session, email: str, password: str):
+    user = get_user_by_email(db, email)
+    if not user:
+        return None
+    if not verify_password(password, user.password_hash):
+        return None
+    return user
+
+def seed_initial_data(db: Session):
+    """Seed default Admin and Student accounts if empty"""
+    admin = get_user_by_email(db, "admin@quantumedu.ai")
+    if not admin:
+        create_user_account(
+            db=db,
+            email="admin@quantumedu.ai",
+            password="admin123",
+            full_name="Quantum Edu Administrator",
+            background="physics-phd",
+            role="admin"
+        )
+
+    student = get_user_by_email(db, "alex@quantumedu.ai")
+    if not student:
+        st_user = create_user_account(
+            db=db,
+            email="alex@quantumedu.ai",
+            password="student123",
+            full_name="Alex Rivera",
+            background="cs-undergrad",
+            role="student"
+        )
+        # Seed progress for Alex
+        update_progress(db, lesson_id="lesson_1", quiz_score=100.0, user_id=st_user.id)
+        update_progress(db, lesson_id="lesson_2", quiz_score=90.0, user_id=st_user.id)
+        # Seed initial badge
+        badge = BadgeModel(
+            id=f"badge_{uuid.uuid4().hex[:6]}",
+            user_id=st_user.id,
+            badge_name="Superposition Explorer",
+            description="Successfully generated Hadamard state vector superposition!"
+        )
+        db.add(badge)
+        db.commit()
+
+def save_circuit(db: Session, title: str, qubit_count: int, gates: list, qasm_code: str, framework: str = "qiskit", user_id: int = None):
+    circuit_id = f"circ_{uuid.uuid4().hex[:8]}"
+    db_circuit = QuantumCircuitModel(
+        id=circuit_id,
+        title=title,
+        user_id=user_id,
+        qubit_count=qubit_count,
+        gates_json=gates,
+        qasm_code=qasm_code,
+        framework=framework
+    )
+    db.add(db_circuit)
+    db.commit()
+    db.refresh(db_circuit)
+    return db_circuit
+
+def get_circuits(db: Session, limit: int = 20):
+    return db.query(QuantumCircuitModel).order_by(QuantumCircuitModel.created_at.desc()).limit(limit).all()
+
+def update_progress(db: Session, lesson_id: str, quiz_score: float, user_id: int = None):
+    db_progress = StudentProgressModel(
+        user_id=user_id,
+        lesson_id=lesson_id,
+        quiz_score=quiz_score
+    )
+    db.add(db_progress)
+    db.commit()
+    db.refresh(db_progress)
+    return db_progress
+
+def get_user_progress(db: Session, user_id: int):
+    return db.query(StudentProgressModel).filter(StudentProgressModel.user_id == user_id).all()
+
+def get_user_badges(db: Session, user_id: int):
+    return db.query(BadgeModel).filter(BadgeModel.user_id == user_id).all()
+
+def get_cohort_attempts(db: Session, limit: int = 10):
+    attempts = db.query(CohortAttemptModel).order_by(CohortAttemptModel.timestamp.desc()).limit(limit).all()
+    if not attempts:
+        mock_attempts = [
+            CohortAttemptModel(student_id="st_101", student_name="Alex Rivera", lesson_title="2. Quantum Entanglement & Bell States", score=100, status="passed"),
+            CohortAttemptModel(student_id="st_102", student_name="Maya Patel", lesson_title="4. Grover’s Quantum Search Algorithm", score=60, status="failed"),
+            CohortAttemptModel(student_id="st_103", student_name="Jordan Chen", lesson_title="1. Qubit Fundamentals & Superposition", score=100, status="passed"),
+        ]
+        for ma in mock_attempts:
+            db.add(ma)
+        db.commit()
+        return mock_attempts
+    return attempts
+
+def get_database_summary(db: Session):
+    """Retrieve counts and table rows for Admin DB Explorer"""
+    users = db.query(User).order_by(User.created_at.desc()).all()
+    circuits = db.query(QuantumCircuitModel).order_by(QuantumCircuitModel.created_at.desc()).all()
+    progress = db.query(StudentProgressModel).order_by(StudentProgressModel.completed_at.desc()).all()
+    badges = db.query(BadgeModel).order_by(BadgeModel.unlocked_at.desc()).all()
+    attempts = db.query(CohortAttemptModel).order_by(CohortAttemptModel.timestamp.desc()).all()
+
+    return {
+        "stats": {
+            "total_users": len(users),
+            "total_circuits": len(circuits),
+            "total_progress_records": len(progress),
+            "total_badges": len(badges),
+            "total_attempts": len(attempts),
+            "db_engine": "SQLite / PostgreSQL (SQLAlchemy ORM Active)"
+        },
+        "tables": {
+            "users": [
+                {
+                    "id": u.id,
+                    "email": u.email,
+                    "full_name": u.full_name,
+                    "role": u.role,
+                    "background": u.user_background,
+                    "created_at": u.created_at.strftime("%Y-%m-%d %H:%M:%S") if u.created_at else ""
+                } for u in users
+            ],
+            "quantum_circuits": [
+                {
+                    "id": c.id,
+                    "title": c.title,
+                    "user_id": c.user_id,
+                    "qubit_count": c.qubit_count,
+                    "framework": c.framework,
+                    "gates_count": len(c.gates_json) if isinstance(c.gates_json, list) else 0,
+                    "created_at": c.created_at.strftime("%Y-%m-%d %H:%M:%S") if c.created_at else ""
+                } for c in circuits
+            ],
+            "student_progress": [
+                {
+                    "id": p.id,
+                    "user_id": p.user_id,
+                    "lesson_id": p.lesson_id,
+                    "quiz_score": p.quiz_score,
+                    "completed_at": p.completed_at.strftime("%Y-%m-%d %H:%M:%S") if p.completed_at else ""
+                } for p in progress
+            ],
+            "badges": [
+                {
+                    "id": b.id,
+                    "user_id": b.user_id,
+                    "badge_name": b.badge_name,
+                    "description": b.description,
+                    "unlocked_at": b.unlocked_at.strftime("%Y-%m-%d %H:%M:%S") if b.unlocked_at else ""
+                } for b in badges
+            ],
+            "cohort_attempts": [
+                {
+                    "id": a.id,
+                    "student_id": a.student_id,
+                    "student_name": a.student_name,
+                    "lesson_title": a.lesson_title,
+                    "score": a.score,
+                    "status": a.status,
+                    "timestamp": a.timestamp.strftime("%Y-%m-%d %H:%M:%S") if a.timestamp else ""
+                } for a in attempts
+            ]
+        }
+    }
+
+def delete_user(db: Session, user_id: int):
+    user = db.query(User).filter(User.id == user_id).first()
+    if user:
+        db.delete(user)
+        db.commit()
+        return True
+    return False
