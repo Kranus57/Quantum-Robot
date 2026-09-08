@@ -18,6 +18,7 @@ import { InstructorDashboard } from './components/dashboard/InstructorDashboard'
 import { AuthModal } from './components/auth/AuthModal';
 import { AdminDBExplorerModal } from './components/admin/AdminDBExplorerModal';
 import { ArrowAssistOverlay } from './components/workspace/ArrowAssistOverlay';
+import { InteractiveVoiceAnimationModal } from './components/workspace/InteractiveVoiceAnimationModal';
 import { Cpu, Code2, Globe, Network } from 'lucide-react';
 
 const WorkspaceLayout: React.FC = () => {
@@ -142,6 +143,7 @@ const MainContent: React.FC = () => {
       </main>
       <AITutorDrawer />
       <ArrowAssistOverlay />
+      <InteractiveVoiceAnimationModal />
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
       <NoiseControlModal isOpen={isNoiseModalOpen} onClose={() => setIsNoiseModalOpen(false)} />
       <MultiplayerModal isOpen={isMultiplayerModalOpen} onClose={() => setIsMultiplayerModalOpen(false)} />

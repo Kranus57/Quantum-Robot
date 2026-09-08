@@ -8,7 +8,8 @@ import {
   CheckCircle, 
   AlertTriangle, 
   Loader2,
-  Check
+  Check,
+  Mic
 } from 'lucide-react';
 
 export const AITutorDrawer: React.FC = () => {
@@ -22,7 +23,8 @@ export const AITutorDrawer: React.FC = () => {
     isAiLoading,
     runAiExplain,
     runAiDebug,
-    runAiOptimize
+    runAiOptimize,
+    setIsVoiceAnimationModalOpen
   } = useQuantum();
 
   if (!aiDrawerOpen) return null;
@@ -89,6 +91,30 @@ export const AITutorDrawer: React.FC = () => {
 
       {/* Drawer Body Content */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
+
+        {/* Launch Interactive Voice & 3D Animation Studio CTA Banner */}
+        <div className="p-3.5 rounded-xl bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white shadow-md space-y-2 border border-blue-800/40">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Mic className="w-4 h-4 text-cyan-400 animate-pulse" />
+              <span className="text-xs font-bold text-cyan-300">Voice & 3D Animation Explainer</span>
+            </div>
+            <span className="text-[9px] font-mono font-semibold px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-400/30">
+              AUDIO & BLOCH
+            </span>
+          </div>
+          <p className="text-[11px] text-blue-100/90 leading-tight">
+            Listen to live Text-to-Speech voice physics narration synchronized with 3D Bloch sphere vector animations & probability collapse!
+          </p>
+          <button
+            onClick={() => setIsVoiceAnimationModalOpen(true)}
+            className="w-full py-1.5 px-3 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs transition-all shadow-md flex items-center justify-center space-x-1.5 active:scale-95"
+          >
+            <Mic className="w-3.5 h-3.5 fill-current" />
+            <span>Launch Interactive Voice Studio</span>
+          </button>
+        </div>
+
         {isAiLoading ? (
           <div className="h-64 flex flex-col items-center justify-center space-y-3 text-blue-600">
             <Loader2 className="w-8 h-8 animate-spin" />

@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useQuantum } from '../../context/QuantumContext';
-import { Play, Pause, SkipBack, SkipForward, RotateCcw, Activity } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, RotateCcw, Activity, Mic } from 'lucide-react';
 
 export const StepByStepStepper: React.FC = () => {
-  const { gates, qubitCount, setSimulationResult, framework, noiseModel } = useQuantum();
+  const { gates, qubitCount, setSimulationResult, framework, noiseModel, setIsVoiceAnimationModalOpen } = useQuantum();
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
 
@@ -79,8 +79,19 @@ export const StepByStepStepper: React.FC = () => {
         </button>
       </div>
 
-      <div className="text-[10px] text-slate-500">
-        Column-by-column Quantum StateVector & Bloch Evolution
+      <div className="flex items-center space-x-3">
+        <button
+          onClick={() => setIsVoiceAnimationModalOpen(true)}
+          className="flex items-center space-x-1.5 px-2.5 py-1 rounded bg-cyan-50 border border-cyan-200 text-cyan-700 hover:bg-cyan-100 font-bold text-[11px] transition-all shadow-sm"
+          title="Open Voice Narration & 3D Animation Explainer"
+        >
+          <Mic className="w-3 h-3 text-cyan-600 animate-pulse" />
+          <span>Explain in Voice</span>
+        </button>
+
+        <div className="text-[10px] text-slate-500 hidden sm:block">
+          Column-by-column Quantum StateVector & Bloch Evolution
+        </div>
       </div>
     </div>
   );

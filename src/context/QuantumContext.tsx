@@ -104,6 +104,10 @@ interface QuantumContextType {
   arrowAssistStep: number;
   setArrowAssistStep: (step: number) => void;
   toggleArrowAssist: () => void;
+
+  // Interactive Voice & 3D Animation Studio
+  isVoiceAnimationModalOpen: boolean;
+  setIsVoiceAnimationModalOpen: (open: boolean) => void;
 }
 
 const QuantumContext = createContext<QuantumContextType | undefined>(undefined);
@@ -157,6 +161,7 @@ export const QuantumProvider: React.FC<{ children: ReactNode }> = ({ children })
 
   // AI Tutor state
   const [aiDrawerOpen, setAiDrawerOpen] = useState<boolean>(false);
+  const [isVoiceAnimationModalOpen, setIsVoiceAnimationModalOpen] = useState<boolean>(false);
   const [aiTab, setAiTab] = useState<'explain' | 'debug' | 'optimize'>('explain');
   const [aiExplanation, setAiExplanation] = useState<string | null>(null);
   const [aiDebugResult, setAiDebugResult] = useState<AIDebugResult | null>(null);
@@ -702,7 +707,9 @@ export const QuantumProvider: React.FC<{ children: ReactNode }> = ({ children })
         setIsArrowAssistActive,
         arrowAssistStep,
         setArrowAssistStep,
-        toggleArrowAssist
+        toggleArrowAssist,
+        isVoiceAnimationModalOpen,
+        setIsVoiceAnimationModalOpen
       }}
     >
       {children}

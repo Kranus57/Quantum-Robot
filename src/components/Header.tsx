@@ -18,7 +18,8 @@ import {
   LogOut,
   User as UserIcon,
   ShieldCheck,
-  Navigation
+  Navigation,
+  Mic
 } from 'lucide-react';
 
 export const Header: React.FC = () => {
@@ -43,7 +44,8 @@ export const Header: React.FC = () => {
     logoutUser,
     setIsAuthModalOpen,
     isArrowAssistActive,
-    toggleArrowAssist
+    toggleArrowAssist,
+    setIsVoiceAnimationModalOpen
   } = useQuantum();
 
   return (
@@ -220,6 +222,16 @@ export const Header: React.FC = () => {
           >
             <Sparkles className="w-3.5 h-3.5 text-blue-600" />
             <span>Study Assistant</span>
+          </button>
+
+          {/* Interactive Voice & Animation Explainer CTA Button */}
+          <button
+            onClick={() => setIsVoiceAnimationModalOpen(true)}
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold text-xs hover:from-cyan-400 hover:to-blue-500 transition-all shadow-md active:scale-95 border border-cyan-300/30"
+            title="Open 3D Bloch Sphere & Interactive Voice Narration Explainer Studio"
+          >
+            <Mic className="w-3.5 h-3.5 text-white animate-pulse" />
+            <span>Voice & Animation</span>
           </button>
         </div>
 
