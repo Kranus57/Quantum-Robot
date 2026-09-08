@@ -8,6 +8,8 @@ export interface User {
   fullName: string;
   userBackground: UserBackgroundProfile;
   role: UserRole;
+  phoneNumber?: string;
+  authProvider?: 'email' | 'google' | 'twilio';
   createdAt?: string;
 }
 
@@ -90,7 +92,7 @@ export interface QuantumGate {
   step: number;
 }
 
-export type Framework = 'qiskit' | 'cirq' | 'pennylane' | 'native';
+export type Framework = 'qiskit' | 'cirq' | 'pennylane' | 'qbraid' | 'native';
 
 export interface ComplexNumber {
   real: number;

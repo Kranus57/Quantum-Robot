@@ -164,5 +164,77 @@ Grover’s algorithm searches an unsorted database of $N = 2^n$ items in $O(\sqr
       correctIndex: 1,
       explanation: 'Grover’s algorithm provides quadratic speedup O(√N) over classical unstructured search O(N).'
     }
+  },
+  {
+    id: 'lesson-5',
+    title: '5. Quantum Fourier Transform (QFT)',
+    category: 'Algorithms',
+    description: 'Map quantum state amplitudes into phase frequency space. Essential component for Shor’s Factoring Algorithm.',
+    difficulty: 'Advanced',
+    qubitCount: 3,
+    initialCircuit: [
+      { id: 'g1', type: 'H', qubit: 0, step: 0 },
+      { id: 'g2', type: 'S', qubit: 1, step: 1 },
+      { id: 'g3', type: 'H', qubit: 1, step: 2 },
+      { id: 'g4', type: 'T', qubit: 2, step: 3 },
+      { id: 'g5', type: 'H', qubit: 2, step: 4 },
+    ],
+    markdownContent: `
+# 5. Quantum Fourier Transform (QFT)
+
+The **Quantum Fourier Transform (QFT)** is the quantum analogue of the Discrete Fourier Transform (DFT). It transforms computational basis states into phase states:
+
+$$\text{QFT} |x\rangle = \frac{1}{\sqrt{N}} \sum_{y=0}^{N-1} \omega^{xy} |y\rangle \quad \text{where } \omega = e^{2\pi i / N}$$
+
+## Why QFT Matters:
+QFT achieves exponential speedup $O(n^2)$ gate complexity compared to classical Fast Fourier Transform (FFT) $O(n 2^n)$. It is the key building block for **Shor’s Factoring Algorithm** and **Quantum Phase Estimation (QPE)**.
+`,
+    quiz: {
+      question: 'What is the circuit complexity of QFT on n qubits?',
+      options: [
+        'O(n^2) gates',
+        'O(2^n) gates',
+        'O(n!) gates',
+        'O(1) gates'
+      ],
+      correctIndex: 0,
+      explanation: 'QFT requires only O(n^2) quantum gates, providing an exponential speedup over classical FFT O(n 2^n).'
+    }
+  },
+  {
+    id: 'lesson-6',
+    title: '6. Variational Quantum Eigensolver (VQE)',
+    category: 'Quantum ML',
+    description: 'Use hybrid quantum-classical algorithms to find ground state energies of molecular Hamiltonians.',
+    difficulty: 'Advanced',
+    qubitCount: 2,
+    initialCircuit: [
+      { id: 'g1', type: 'RX', qubit: 0, step: 0 },
+      { id: 'g2', type: 'RY', qubit: 1, step: 0 },
+      { id: 'g3', type: 'CNOT', qubit: 0, targetQubit: 1, step: 1 },
+    ],
+    markdownContent: `
+# 6. Variational Quantum Eigensolver (VQE)
+
+**VQE** is a Noisy Intermediate-Scale Quantum (NISQ) hybrid algorithm designed to calculate the lowest energy state (ground state) of a quantum system described by Hamiltonian $\hat{H}$.
+
+## The Variational Principle:
+$$\langle \psi(\vec{\theta}) | \hat{H} | \psi(\vec{\theta}) \rangle \ge E_0$$
+
+1. **Ansatz Preparation**: Prepare parameterized quantum state $|\psi(\vec{\theta})\rangle$ on quantum hardware.
+2. **Energy Measurement**: Measure expectation values of Hamiltonian terms.
+3. **Classical Optimization**: Update parameters $\vec{\theta}$ using gradient descent on classical processor.
+`,
+    quiz: {
+      question: 'Which principle guarantees that the VQE measured energy expectation value is always greater than or equal to the true ground state energy E0?',
+      options: [
+        'Heisenberg Uncertainty Principle',
+        'Variational Principle',
+        'Pauli Exclusion Principle',
+        'No-Cloning Theorem'
+      ],
+      correctIndex: 1,
+      explanation: 'The Variational Principle guarantees that ⟨ψ(θ)|H|ψ(θ)⟩ ≥ E0 for any parameterized trial wavefunction.'
+    }
   }
 ];

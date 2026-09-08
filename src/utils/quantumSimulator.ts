@@ -418,3 +418,26 @@ export function generatePennyLaneCode(gates: QuantumGate[], numQubits: number): 
   code += `    return qml.state()\n\nprint("Statevector:", quantum_circuit())\n`;
   return code;
 }
+
+export function generateQBraidCode(gates: QuantumGate[], numQubits: number): string {
+  let code = `from qbraid import QProgram, device_wrapper\nfrom qiskit import QuantumCircuit\n\n# Initialize ${numQubits}-qubit circuit in qBraid SDK environment\nqc = QuantumCircuit(${numQubits}, ${numQubits})\n\n`;
+  const sorted = [...gates].sort((a, b) => a.step - b.step);
+
+  for (const g of sorted) {
+    switch (g.type) {
+      case 'H': code += `qc.h(${g.qubit})\n`; break;
+      case 'X': code += `qc.x(${g.qubit})\n`; break;
+      case 'Y': code += `qc.y(${g.qubit})\n`; break;
+      case 'Z': code += `qc.z(${g.qubit})\n`; break;
+      case 'S': code += `qc.s(${g.qubit})\n`; break;
+      case 'T': code += `qc.t(${g.qubit})\n`; break;
+      case 'CNOT': code += `qc.cx(${g.qubit}, ${g.targetQubit})\n`; break;
+      case 'CZ': code += `qc.cz(${g.qubit}, ${g.targetQubit})\n`; break;
+      case 'TOFFOLI': code += `qc.ccx(${g.qubit}, ${g.control2Qubit}, ${g.targetQubit})\n`; break;
+      case 'MEASURE': code += `qc.measure(${g.qubit}, ${g.qubit})\n`; break;
+    }
+  }
+
+  code += `\n# Transpile & Execute across qBraid Quantum Device Wrapper\nqprogram = QProgram(qc)\ndevice = device_wrapper("qbraid_qiskit_simulator")\njob = device.run(qprogram, shots=1024)\nresult = job.result()\nprint("qBraid Execution Results:", result.measurement_counts())\n`;
+  return code;
+}

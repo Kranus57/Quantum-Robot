@@ -13,6 +13,10 @@ def verify_password(password: str, hashed: str) -> bool:
 def get_user_by_email(db: Session, email: str):
     return db.query(User).filter(User.email == str(email).lower().strip()).first()
 
+def get_user_by_phone(db: Session, phone_number: str):
+    clean_phone = str(phone_number).strip()
+    return db.query(User).filter(User.email == f"{clean_phone}@phone.quantumedu.ai").first()
+
 def create_user_account(db: Session, email: str, password: str, full_name: str, background: str = "cs-undergrad", role: str = "student"):
     email_clean = str(email).lower().strip()
     existing = get_user_by_email(db, email_clean)
@@ -31,6 +35,21 @@ def create_user_account(db: Session, email: str, password: str, full_name: str, 
     db.commit()
     db.refresh(db_user)
     return db_user
+
+def create_user(db: Session, email: str, password: str, full_name: str, user_background: str = "cs-undergrad", role: str = "student"):
+    return create_user_account(db, email, password, full_name, user_background, role)
+
+def create_user_by_phone(db: Session, phone_number: str, full_name: str = "Quantum Learner", user_background: str = "cs-undergrad"):
+    clean_phone = str(phone_number).strip()
+    pseudo_email = f"{clean_phone}@phone.quantumedu.ai"
+    return create_user_account(
+        db=db,
+        email=pseudo_email,
+        password="twilio_otp_authenticated",
+        full_name=f"{full_name} ({clean_phone})",
+        background=user_background,
+        role="student"
+    )
 
 def authenticate_user(db: Session, email: str, password: str):
     user = get_user_by_email(db, email)
@@ -94,6 +113,9 @@ def save_circuit(db: Session, title: str, qubit_count: int, gates: list, qasm_co
 
 def get_circuits(db: Session, limit: int = 20):
     return db.query(QuantumCircuitModel).order_by(QuantumCircuitModel.created_at.desc()).limit(limit).all()
+
+def get_user_circuits(db: Session, user_id: int, limit: int = 10):
+    return db.query(QuantumCircuitModel).filter(QuantumCircuitModel.user_id == user_id).order_by(QuantumCircuitModel.created_at.desc()).limit(limit).all()
 
 def update_progress(db: Session, lesson_id: str, quiz_score: float, user_id: int = None):
     db_progress = StudentProgressModel(

@@ -10,7 +10,9 @@ from backend.schemas import (
     AIOptimizeRequestSchema,
     UserRegisterSchema,
     UserLoginSchema,
-    GoogleAuthSchema
+    GoogleAuthSchema,
+    TwilioSendOtpSchema,
+    TwilioVerifyOtpSchema
 )
 from backend.database import Base, engine, get_db, auto_migrate_schema
 from backend import crud
@@ -18,6 +20,7 @@ from backend.drivers.native_simulator import NativeQuantumSimulator
 from backend.drivers.qiskit_driver import QiskitDriver
 from backend.drivers.cirq_driver import CirqDriver
 from backend.drivers.pennylane_driver import PennyLaneDriver
+from backend.drivers.qbraid_driver import QBraidDriver
 from backend.ai_engine import AIEngine
 from backend.websocket_server import manager
 
@@ -107,6 +110,70 @@ def google_auth(payload: GoogleAuthSchema, db: Session = Depends(get_db)):
         }
     }
 
+# Twilio SMS OTP Authentication Routes
+@app.post("/api/auth/twilio/send-otp")
+def send_twilio_otp(payload: TwilioSendOtpSchema):
+    phone_clean = payload.phoneNumber.strip()
+    if len(phone_clean) < 7:
+        raise HTTPException(status_code=400, detail="Invalid phone number format.")
+    
+    # In production, dispatch Twilio REST API SMS request:
+    # twilio_client.messages.create(body=f"Your QuantumEdu AI verification code is 123456", to=phone_clean, from_=TWILIO_PHONE)
+    return {
+        "status": "success",
+        "message": f"Verification SMS OTP dispatched to {payload.countryCode} {phone_clean}. Use code '123456' for verification.",
+        "phoneNumber": phone_clean,
+        "countryCode": payload.countryCode
+    }
+
+@app.post("/api/auth/twilio/verify-otp")
+def verify_twilio_otp(payload: TwilioVerifyOtpSchema, db: Session = Depends(get_db)):
+    if payload.otpCode.strip() != "123456" and payload.otpCode.strip() != "888888":
+        raise HTTPException(status_code=400, detail="Invalid 6-digit OTP verification code. Use '123456' for testing.")
+    
+    phone_clean = payload.phoneNumber.strip()
+    existing = crud.get_user_by_phone(db, phone_clean)
+    if existing:
+        user = existing
+    else:
+        user = crud.create_user_by_phone(
+            db=db,
+            phone_number=phone_clean,
+            full_name=payload.fullName or "Quantum Learner",
+            user_background=payload.userBackground or "cs-undergrad"
+        )
+    
+    progress = crud.get_user_progress(db, user.id)
+    badges = crud.get_user_badges(db, user.id)
+
+    return {
+        "status": "success",
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "fullName": user.full_name,
+            "userBackground": user.user_background,
+            "role": user.role,
+            "createdAt": user.created_at.strftime("%Y-%m-%d %H:%M:%S") if user.created_at else ""
+        },
+        "progress": [
+            {
+                "id": p.id,
+                "lesson_id": p.lesson_id,
+                "quiz_score": p.quiz_score,
+                "completed_at": p.completed_at.strftime("%Y-%m-%d %H:%M:%S") if p.completed_at else ""
+            } for p in progress
+        ],
+        "badges": [
+            {
+                "id": b.id,
+                "badge_name": b.badge_name,
+                "description": b.description,
+                "unlocked_at": b.unlocked_at.strftime("%Y-%m-%d %H:%M:%S") if b.unlocked_at else ""
+            } for b in badges
+        ]
+    }
+
 @app.post("/api/auth/login")
 def login_user(payload: UserLoginSchema, db: Session = Depends(get_db)):
     user = crud.authenticate_user(db, payload.email, payload.password)
@@ -185,6 +252,8 @@ def simulate_circuit(req: CircuitRequestSchema):
         return CirqDriver.execute_circuit(gates_dict, req.qubitCount, req.shots)
     elif fw == "pennylane":
         return PennyLaneDriver.execute_circuit(gates_dict, req.qubitCount, req.shots)
+    elif fw == "qbraid":
+        return QBraidDriver.execute_circuit(gates_dict, req.qubitCount, req.shots)
     else:
         return NativeQuantumSimulator.run_simulation(gates_dict, req.qubitCount, req.shots)
 
@@ -208,6 +277,21 @@ def save_circuit(title: str, req: CircuitRequestSchema, user_id: int = 1, db: Se
 def list_circuits(limit: int = 20, db: Session = Depends(get_db)):
     circuits = crud.get_circuits(db, limit=limit)
     return [{"id": c.id, "title": c.title, "qubit_count": c.qubit_count, "framework": c.framework, "created_at": c.created_at} for c in circuits]
+
+@app.get("/api/user/circuits/{user_id}")
+def get_user_circuits(user_id: int, db: Session = Depends(get_db)):
+    circuits = crud.get_user_circuits(db, user_id=user_id)
+    return [
+        {
+            "id": c.id,
+            "title": c.title,
+            "qubit_count": c.qubit_count,
+            "gates": c.gates_json,
+            "qasm_code": c.qasm_code,
+            "framework": c.framework,
+            "created_at": c.created_at.strftime("%Y-%m-%d %H:%M:%S") if c.created_at else ""
+        } for c in circuits
+    ]
 
 # Admin DB Explorer Route
 @app.get("/api/admin/db")

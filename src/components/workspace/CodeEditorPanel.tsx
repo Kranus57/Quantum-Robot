@@ -24,7 +24,7 @@ export const CodeEditorPanel: React.FC = () => {
           </div>
 
           <div className="flex items-center space-x-1 bg-quantum-bg p-1 rounded-lg border border-quantum-border">
-            {(['qiskit', 'cirq', 'pennylane'] as Framework[]).map((fw) => (
+            {(['qiskit', 'cirq', 'pennylane', 'qbraid'] as Framework[]).map((fw) => (
               <button
                 key={fw}
                 onClick={() => setFramework(fw)}
