@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useQuantum } from '../../context/QuantumContext';
 import { CURRICULUM_LESSONS } from '../../data/curriculumData';
-import { BookOpen, CheckCircle, HelpCircle, Sparkles, ChevronRight } from 'lucide-react';
+import { getAdaptiveExplanation } from '../../utils/personalizedPathEngine';
+import { BookOpen, CheckCircle, HelpCircle, Sparkles, ChevronRight, Compass, GraduationCap, BrainCircuit } from 'lucide-react';
 
 export const CurriculumPanel: React.FC = () => {
-  const { currentLesson, selectLessonById, submitQuizAnswer, studentProgress, runAiExplain } = useQuantum();
+  const { currentLesson, selectLessonById, submitQuizAnswer, studentProgress, runAiExplain, userBackground, pathSummary, setActiveView } = useQuantum();
   const [selectedQuizOption, setSelectedQuizOption] = useState<number | null>(null);
   const [quizSubmitted, setQuizSubmitted] = useState<boolean>(false);
   const [quizFeedback, setQuizFeedback] = useState<{ isCorrect: boolean; explanation: string } | null>(null);
@@ -26,6 +27,8 @@ export const CurriculumPanel: React.FC = () => {
     setQuizFeedback(null);
   };
 
+  const adaptiveText = getAdaptiveExplanation(currentLesson.id, userBackground);
+
   return (
     <div id="curriculum-panel" className="h-full flex flex-col bg-white border-r border-slate-200 overflow-hidden">
       {/* Lesson Selector Bar */}
@@ -34,9 +37,27 @@ export const CurriculumPanel: React.FC = () => {
           <BookOpen className="w-4 h-4" />
           <span>Curriculum Modules</span>
         </div>
-        <span className="text-[11px] px-2.5 py-0.5 rounded bg-white text-slate-700 border border-slate-200 font-mono font-medium shadow-sm">
-          {studentProgress.completedLessonIds.length} / {CURRICULUM_LESSONS.length} Completed
-        </span>
+        <div className="flex items-center space-x-1">
+          <button
+            onClick={() => setActiveView('theory-math')}
+            className="text-[10px] px-2 py-0.5 rounded bg-cyan-50 hover:bg-cyan-100 text-cyan-700 border border-cyan-200 font-bold flex items-center space-x-1 transition-all"
+            title="Open AI Theory & Math Studio"
+          >
+            <BrainCircuit className="w-3 h-3 text-cyan-600" />
+            <span>Math Lab</span>
+          </button>
+          <button
+            onClick={() => setActiveView('learning-path')}
+            className="text-[10px] px-2 py-0.5 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold flex items-center space-x-1 transition-all"
+            title="Open Personalized Pathway Roadmap"
+          >
+            <Compass className="w-3 h-3 text-indigo-600" />
+            <span>Path</span>
+          </button>
+          <span className="text-[11px] px-2.5 py-0.5 rounded bg-white text-slate-700 border border-slate-200 font-mono font-medium shadow-sm">
+            {studentProgress.completedLessonIds.length} / {CURRICULUM_LESSONS.length} Completed
+          </span>
+        </div>
       </div>
 
       {/* Module List Pills */}
@@ -75,6 +96,19 @@ export const CurriculumPanel: React.FC = () => {
           </div>
           <h2 className="text-lg font-bold text-slate-900 tracking-tight">{currentLesson.title}</h2>
           <p className="text-xs text-slate-500 mt-1">{currentLesson.description}</p>
+        </div>
+
+        {/* Adaptive Explanation Profile Banner */}
+        <div className="p-3 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 text-xs space-y-1.5">
+          <div className="flex items-center justify-between text-blue-900 font-bold">
+            <span className="flex items-center space-x-1.5">
+              <GraduationCap className="w-4 h-4 text-blue-600" />
+              <span>Adaptive Explanation ({userBackground.toUpperCase()} Track)</span>
+            </span>
+          </div>
+          <p className="text-xs text-slate-700 leading-relaxed font-sans">
+            {adaptiveText}
+          </p>
         </div>
 
         {/* Formatted Lesson Text & Formulas */}

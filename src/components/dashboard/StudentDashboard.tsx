@@ -12,11 +12,14 @@ import {
   Trophy,
   Database,
   User as UserIcon,
-  LogIn
+  LogIn,
+  Compass,
+  ArrowRight,
+  Target
 } from 'lucide-react';
 
 export const StudentDashboard: React.FC = () => {
-  const { studentProgress, selectLessonById, setActiveView, user, setIsAuthModalOpen } = useQuantum();
+  const { studentProgress, selectLessonById, setActiveView, user, setIsAuthModalOpen, pathSummary, launchPathNode } = useQuantum();
 
   const completionPct = Math.round(
     (studentProgress.completedLessonIds.length / CURRICULUM_LESSONS.length) * 100
@@ -58,6 +61,14 @@ export const StudentDashboard: React.FC = () => {
             )}
 
             <button
+              onClick={() => setActiveView('learning-path')}
+              className="px-4 py-2 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-extrabold text-xs shadow-md transition-all flex items-center space-x-2"
+            >
+              <Compass className="w-4 h-4" />
+              <span>Personalized Path</span>
+            </button>
+
+            <button
               onClick={() => setActiveView('workspace')}
               className="px-4 py-2 rounded-xl bg-white text-blue-700 font-bold text-xs shadow-md hover:bg-blue-50 transition-all flex items-center space-x-2"
             >
@@ -67,6 +78,45 @@ export const StudentDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Personalized Learning Path Recommended Card */}
+      {pathSummary.recommendedNode && (
+        <div className="p-5 rounded-2xl bg-gradient-to-r from-indigo-900 via-blue-900 to-slate-900 text-white shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center space-x-2">
+              <span className="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-400/30 text-[10px] font-mono font-bold uppercase">
+                ★ RECOMMENDED NEXT LESSON FOR YOU
+              </span>
+              <span className="text-[11px] text-slate-300 font-mono">
+                Track: {pathSummary.goal.replace('-', ' ').toUpperCase()}
+              </span>
+            </div>
+            <h3 className="text-lg font-bold text-white tracking-tight">
+              {pathSummary.recommendedNode.title}
+            </h3>
+            <p className="text-xs text-slate-300">
+              {pathSummary.recommendedNode.recommendedReason}
+            </p>
+          </div>
+
+          <div className="flex items-center space-x-2 flex-shrink-0">
+            <button
+              onClick={() => launchPathNode(pathSummary.recommendedNode!.lessonId)}
+              className="px-4 py-2 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-bold text-xs shadow-md transition-all flex items-center space-x-1.5"
+            >
+              <Play className="w-3.5 h-3.5 fill-white" />
+              <span>Start Recommended Lesson</span>
+            </button>
+            <button
+              onClick={() => setActiveView('learning-path')}
+              className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold text-xs transition-all flex items-center space-x-1"
+            >
+              <span>Full Roadmap</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Metrics Row */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

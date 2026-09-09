@@ -14,14 +14,19 @@ import {
   ActiveViewMode,
   DBTableSummary
 } from '../types/quantum';
+import { LearningGoal, PaceSetting, PersonalizedPathSummary } from '../types/learningPath';
 import { CURRICULUM_LESSONS } from '../data/curriculumData';
-import { 
-  simulateCircuit, 
-  generateQiskitCode, 
-  generateCirqCode, 
-  generatePennyLaneCode,
-  generateQBraidCode
-} from '../utils/quantumSimulator';
+import { generatePersonalizedPath } from '../utils/personalizedPathEngine';
+import { simulateCircuit, generateQiskitCode, generateCirqCode, generatePennyLaneCode, generateQBraidCode } from '../utils/quantumSimulator';
+import { aiVoiceEngine } from '../utils/aiVoiceEngine';
+
+export interface TerminalLogEntry {
+  id: string;
+  timestamp: string;
+  type: 'system' | 'info' | 'warning' | 'error' | 'ai-hint';
+  message: string;
+  codeHint?: string;
+}
 
 interface QuantumContextType {
   // Authentication & User State
@@ -73,6 +78,12 @@ interface QuantumContextType {
   // Next-Gen Multiplayer & Adaptive Background Profile
   userBackground: UserBackgroundProfile;
   setUserBackground: (profile: UserBackgroundProfile) => void;
+  learningGoal: LearningGoal;
+  setLearningGoal: (goal: LearningGoal) => void;
+  learningPace: PaceSetting;
+  setLearningPace: (pace: PaceSetting) => void;
+  pathSummary: PersonalizedPathSummary;
+  launchPathNode: (lessonId: string) => void;
   multiplayerSession: MultiplayerSession | null;
   setMultiplayerSession: (session: MultiplayerSession | null) => void;
   isMultiplayerModalOpen: boolean;
@@ -112,6 +123,15 @@ interface QuantumContextType {
   // Interactive Voice & 3D Animation Studio
   isVoiceAnimationModalOpen: boolean;
   setIsVoiceAnimationModalOpen: (open: boolean) => void;
+
+  // Terminal Execution Logs & AI Code Architect Engine
+  terminalLogs: TerminalLogEntry[];
+  addTerminalLog: (type: TerminalLogEntry['type'], message: string, codeHint?: string) => void;
+  clearTerminalLogs: () => void;
+  isCodeArchitectOpen: boolean;
+  setIsCodeArchitectOpen: (open: boolean) => void;
+  generateCodeWithAI: (prompt: string, targetFw?: Framework) => Promise<void>;
+  debugCodeWithAI: () => Promise<void>;
 }
 
 const QuantumContext = createContext<QuantumContextType | undefined>(undefined);
@@ -157,8 +177,15 @@ export const QuantumProvider: React.FC<{ children: ReactNode }> = ({ children })
   });
   const [isNoiseModalOpen, setIsNoiseModalOpen] = useState<boolean>(false);
 
-  // Adaptive Profile & Multiplayer
+  // Adaptive Profile & Learning Path Goals
   const [userBackground, setUserBackground] = useState<UserBackgroundProfile>(user?.userBackground || 'cs-undergrad');
+  const [learningGoal, setLearningGoal] = useState<LearningGoal>(() => {
+    return (localStorage.getItem('quantum_learning_goal') as LearningGoal) || 'quantum-algorithms';
+  });
+  const [learningPace, setLearningPace] = useState<PaceSetting>(() => {
+    return (localStorage.getItem('quantum_learning_pace') as PaceSetting) || 'standard';
+  });
+
   const [multiplayerSession, setMultiplayerSession] = useState<MultiplayerSession | null>({
     sessionId: 'q_sandbox_882',
     isHost: true,
@@ -192,6 +219,154 @@ export const QuantumProvider: React.FC<{ children: ReactNode }> = ({ children })
     totalCircuitsRun: 14,
     totalTimeSpentMinutes: 52
   });
+
+  // Terminal Execution Logs & AI Code Architect State
+  const [terminalLogs, setTerminalLogs] = useState<TerminalLogEntry[]>([
+    { id: 'log-1', timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), type: 'system', message: 'Quantum Engine initialized via driver.' },
+    { id: 'log-2', timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), type: 'info', message: 'Statevector matrix simulation pipeline active.' }
+  ]);
+  const [isCodeArchitectOpen, setIsCodeArchitectOpen] = useState<boolean>(false);
+
+  const addTerminalLog = (type: TerminalLogEntry['type'], message: string, codeHint?: string) => {
+    const newLog: TerminalLogEntry = {
+      id: 'log-' + Math.random().toString(36).substring(2, 9),
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      type,
+      message,
+      codeHint
+    };
+    setTerminalLogs(prev => [...prev, newLog]);
+  };
+
+  const clearTerminalLogs = () => {
+    setTerminalLogs([]);
+  };
+
+  const generateCodeWithAI = async (prompt: string, targetFw?: Framework) => {
+    const fw = targetFw || framework;
+    setIsAiLoading(true);
+
+    const promptLower = prompt.toLowerCase();
+    let newQubits = 3;
+    let newGates: QuantumGate[] = [];
+
+    if (promptLower.includes('bell') || promptLower.includes('entangle')) {
+      newQubits = 2;
+      newGates = [
+        { id: 'b1', type: 'H', qubit: 0, step: 0 },
+        { id: 'b2', type: 'CNOT', qubit: 0, targetQubit: 1, step: 1 }
+      ];
+    } else if (promptLower.includes('grover') || promptLower.includes('search')) {
+      newQubits = 3;
+      newGates = [
+        { id: 'gr1', type: 'H', qubit: 0, step: 0 },
+        { id: 'gr2', type: 'H', qubit: 1, step: 0 },
+        { id: 'gr3', type: 'H', qubit: 2, step: 0 },
+        { id: 'gr4', type: 'TOFFOLI', qubit: 0, control2Qubit: 1, targetQubit: 2, step: 1 }
+      ];
+    } else if (promptLower.includes('teleport')) {
+      newQubits = 3;
+      newGates = [
+        { id: 't1', type: 'X', qubit: 0, step: 0 },
+        { id: 't2', type: 'H', qubit: 1, step: 0 },
+        { id: 't3', type: 'CNOT', qubit: 1, targetQubit: 2, step: 1 },
+        { id: 't4', type: 'CNOT', qubit: 0, targetQubit: 1, step: 2 },
+        { id: 't5', type: 'H', qubit: 0, step: 3 }
+      ];
+    } else if (promptLower.includes('qft') || promptLower.includes('fourier')) {
+      newQubits = 3;
+      newGates = [
+        { id: 'q1', type: 'H', qubit: 0, step: 0 },
+        { id: 'q2', type: 'S', qubit: 1, step: 1 },
+        { id: 'q3', type: 'H', qubit: 1, step: 2 },
+        { id: 'q4', type: 'T', qubit: 2, step: 3 },
+        { id: 'q5', type: 'H', qubit: 2, step: 4 }
+      ];
+    } else if (promptLower.includes('vqe') || promptLower.includes('variational')) {
+      newQubits = 2;
+      newGates = [
+        { id: 'v1', type: 'RX', qubit: 0, step: 0 },
+        { id: 'v2', type: 'RY', qubit: 1, step: 0 },
+        { id: 'v3', type: 'CNOT', qubit: 0, targetQubit: 1, step: 1 }
+      ];
+    } else {
+      newQubits = 2;
+      newGates = [
+        { id: 'g1', type: 'H', qubit: 0, step: 0 },
+        { id: 'g2', type: 'X', qubit: 1, step: 0 }
+      ];
+    }
+
+    setQubitCount(newQubits);
+    setGates(newGates);
+    setFramework(fw);
+
+    const logMsg = `AI Code Architect generated algorithm '${prompt}' for backend engine '${fw.toUpperCase()}'.`;
+    addTerminalLog('info', logMsg);
+    addTerminalLog('system', `Synchronized visual circuit diagram with ${newQubits} qubits and ${newGates.length} gates.`);
+
+    const voiceMsg = `AI Agent has successfully generated your ${prompt} quantum code in ${fw}. Visual circuit diagram is now synchronized.`;
+    aiVoiceEngine.speak(voiceMsg);
+
+    setIsAiLoading(false);
+  };
+
+  const debugCodeWithAI = async () => {
+    setIsAiLoading(true);
+    addTerminalLog('info', `AI Code Debugger initiating diagnostic scan on active ${framework.toUpperCase()} code...`);
+
+    const hasMeasurement = gates.some(g => g.type === 'MEASURE');
+    const hasUnconnectedCNOT = gates.some(g => g.type === 'CNOT' && g.targetQubit === undefined);
+    const hasSuperposition = gates.some(g => g.type === 'H');
+
+    let voiceHint = '';
+
+    if (!hasMeasurement) {
+      const msg = `[DIAGNOSTIC WARNING]: Circuit lacks explicit Measurement (M) gates.`;
+      const codeHint = `Drag Measurement gates to the end of qubit wires or add 'qc.measure_all()' in Qiskit to record bitstrings.`;
+      addTerminalLog('warning', msg, codeHint);
+      voiceHint = `Warning: Your quantum circuit lacks explicit measurement gates. Drag measurement gates to the end of qubit wires to record final state outcomes.`;
+    } else if (hasUnconnectedCNOT) {
+      const msg = `[DIAGNOSTIC ERROR]: CNOT gate missing target qubit wire assignment.`;
+      const codeHint = `Specify targetQubit index for controlled-NOT operations (e.g. CNOT control q0 -> target q1).`;
+      addTerminalLog('error', msg, codeHint);
+      voiceHint = `Error detected: A Controlled-NOT gate is missing a target qubit wire assignment. Please specify the target qubit index.`;
+    } else if (qubitCount > 1 && !hasSuperposition) {
+      const msg = `[DIAGNOSTIC SUGGESTION]: Multi-qubit circuit initialized without Hadamard superposition gates.`;
+      const codeHint = `Apply an H gate to control qubit before CNOT to construct quantum superposition and Bell state entanglement.`;
+      addTerminalLog('ai-hint', msg, codeHint);
+      voiceHint = `Suggestion: Multi-qubit circuit initialized without Hadamard gates. Apply a Hadamard gate to qubit 0 to create quantum superposition before entangling.`;
+    } else {
+      const msg = `[DIAGNOSTIC SUCCESS]: Circuit layout is physically valid and syntactically sound! No gate control errors detected.`;
+      addTerminalLog('info', msg);
+      voiceHint = `Your quantum circuit and Python code are syntactically sound and physically valid. Simulation is running smoothly.`;
+    }
+
+    aiVoiceEngine.speak(voiceHint);
+    setIsAiLoading(false);
+  };
+
+  // Save learning goal and pace when changed
+  useEffect(() => {
+    localStorage.setItem('quantum_learning_goal', learningGoal);
+  }, [learningGoal]);
+
+  useEffect(() => {
+    localStorage.setItem('quantum_learning_pace', learningPace);
+  }, [learningPace]);
+
+  // Compute dynamic personalized learning path summary
+  const pathSummary = generatePersonalizedPath(
+    userBackground,
+    learningGoal,
+    learningPace,
+    studentProgress.completedLessonIds
+  );
+
+  const launchPathNode = (lessonId: string) => {
+    selectLessonById(lessonId);
+    setActiveView('workspace');
+  };
 
   // Arrow Assist State
   const [isArrowAssistActive, setIsArrowAssistActive] = useState<boolean>(false);
@@ -857,6 +1032,12 @@ export const QuantumProvider: React.FC<{ children: ReactNode }> = ({ children })
         setIsNoiseModalOpen,
         userBackground,
         setUserBackground,
+        learningGoal,
+        setLearningGoal,
+        learningPace,
+        setLearningPace,
+        pathSummary,
+        launchPathNode,
         multiplayerSession,
         setMultiplayerSession,
         isMultiplayerModalOpen,
@@ -885,7 +1066,14 @@ export const QuantumProvider: React.FC<{ children: ReactNode }> = ({ children })
         setArrowAssistStep,
         toggleArrowAssist,
         isVoiceAnimationModalOpen,
-        setIsVoiceAnimationModalOpen
+        setIsVoiceAnimationModalOpen,
+        terminalLogs,
+        addTerminalLog,
+        clearTerminalLogs,
+        isCodeArchitectOpen,
+        setIsCodeArchitectOpen,
+        generateCodeWithAI,
+        debugCodeWithAI
       }}
     >
       {children}

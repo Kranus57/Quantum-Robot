@@ -21,7 +21,9 @@ import {
   Save,
   Check,
   Layers,
-  Cpu
+  Cpu,
+  Compass,
+  BrainCircuit
 } from 'lucide-react';
 
 export const Header: React.FC = () => {
@@ -58,66 +60,88 @@ export const Header: React.FC = () => {
   };
 
   return (
-    <header className="bg-white border-b border-slate-200 text-slate-900 sticky top-0 z-30 shadow-sm">
+    <header className="bg-slate-900 border-b border-slate-800 text-white sticky top-0 z-30 shadow-md">
       {/* Top Bar: Primary Branding, Main Navigation, Run CTA & Account Controls */}
-      <div className="h-13 px-4 flex items-center justify-between border-b border-slate-200">
+      <div className="h-13 px-4 flex items-center justify-between border-b border-slate-800">
         {/* Left: Custom Product Logo & Navigation Tabs */}
         <div className="flex items-center space-x-6">
-          {/* Custom Sleek Logo */}
+          {/* Custom Sleek Corporate Logo */}
           <div 
             className="flex items-center space-x-2.5 cursor-pointer group select-none" 
             onClick={() => setActiveView('workspace')}
           >
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-md shadow-blue-500/20 group-hover:scale-105 transition-all">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-500 via-blue-600 to-indigo-600 flex items-center justify-center shadow-md shadow-sky-500/20 group-hover:scale-105 transition-all">
               <Atom className="w-5 h-5 text-white animate-spin-slow" />
             </div>
             <div>
               <div className="flex items-center space-x-1.5">
-                <span className="font-extrabold text-sm tracking-tight text-slate-900 font-sans uppercase">
-                  QUANTUM<span className="text-blue-600 font-light">STUDIO</span>
+                <span className="font-black text-sm tracking-tight text-white font-sans uppercase">
+                  QUANTUM<span className="text-sky-400 font-light">STUDIO</span>
                 </span>
-                <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 border border-blue-200 font-semibold">
-                  v3.0
+                <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-sky-500/20 text-sky-300 border border-sky-400/30 font-bold">
+                  ENTERPRISE v3.0
                 </span>
               </div>
-              <p className="text-[10px] text-slate-500 font-medium">Enterprise Simulation & Computing Platform</p>
+              <p className="text-[10px] text-slate-400 font-medium">Enterprise Simulation & Computing Platform</p>
             </div>
           </div>
 
           {/* Main View Navigation Switcher */}
-          <nav className="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+          <nav className="flex items-center space-x-1 bg-slate-800/80 p-1 rounded-xl border border-slate-700/80">
             <button
               onClick={() => setActiveView('workspace')}
-              className={`flex items-center space-x-2 px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex items-center space-x-2 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
                 activeView === 'workspace'
-                  ? 'bg-white text-blue-600 shadow-sm border border-slate-200 font-bold'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                  ? 'bg-sky-500 text-slate-950 shadow-sm font-extrabold'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
               }`}
             >
               <BookOpen className="w-3.5 h-3.5" />
               <span>Lab Workspace</span>
             </button>
 
-            {user?.role !== 'admin' && (
-              <button
-                onClick={() => setActiveView('student-dashboard')}
-                className={`flex items-center space-x-2 px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                  activeView === 'student-dashboard'
-                    ? 'bg-white text-indigo-600 shadow-sm border border-slate-200 font-bold'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
-                }`}
-              >
-                <UserCheck className="w-3.5 h-3.5" />
-                <span>Student Portal</span>
-              </button>
-            )}
+            <button
+              onClick={() => setActiveView('learning-path')}
+              className={`flex items-center space-x-2 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                activeView === 'learning-path'
+                  ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-sm font-extrabold'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
+              }`}
+            >
+              <Compass className="w-3.5 h-3.5" />
+              <span>Learning Path</span>
+            </button>
+
+            <button
+              onClick={() => setActiveView('theory-math')}
+              className={`flex items-center space-x-2 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                activeView === 'theory-math'
+                  ? 'bg-cyan-500 text-slate-950 shadow-sm font-extrabold'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
+              }`}
+            >
+              <BrainCircuit className="w-3.5 h-3.5" />
+              <span>AI Theory Lab</span>
+            </button>
+
+            <button
+              onClick={() => setActiveView('student-dashboard')}
+              className={`flex items-center space-x-2 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                activeView === 'student-dashboard'
+                  ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
+              }`}
+            >
+              <UserCheck className="w-3.5 h-3.5" />
+              <span>Student Portal</span>
+            </button>
 
             <button
               onClick={() => setActiveView('instructor-dashboard')}
-              className={`flex items-center space-x-2 px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex items-center space-x-2 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
                 activeView === 'instructor-dashboard'
-                  ? 'bg-white text-emerald-600 shadow-sm border border-slate-200 font-bold'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                  ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
               }`}
             >
               <BarChart3 className="w-3.5 h-3.5" />

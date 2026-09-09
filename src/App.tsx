@@ -17,8 +17,11 @@ import { StudentDashboard } from './components/dashboard/StudentDashboard';
 import { InstructorDashboard } from './components/dashboard/InstructorDashboard';
 import { AuthModal } from './components/auth/AuthModal';
 import { AdminDBExplorerModal } from './components/admin/AdminDBExplorerModal';
+import { PersonalizedLearningPath } from './components/learningPath/PersonalizedLearningPath';
+import { AITheoryMathStudio } from './components/theoryMath/AITheoryMathStudio';
 import { ArrowAssistOverlay } from './components/workspace/ArrowAssistOverlay';
 import { InteractiveVoiceAnimationModal } from './components/workspace/InteractiveVoiceAnimationModal';
+import { AICodeArchitectModal } from './components/ai/AICodeArchitectModal';
 import { Cpu, Code2, Globe, Network } from 'lucide-react';
 
 const WorkspaceLayout: React.FC = () => {
@@ -137,6 +140,8 @@ const MainContent: React.FC = () => {
       <Header />
       <main className="flex-1 flex overflow-hidden">
         {activeView === 'workspace' && <WorkspaceLayout />}
+        {activeView === 'learning-path' && <PersonalizedLearningPath />}
+        {activeView === 'theory-math' && <AITheoryMathStudio />}
         {activeView === 'student-dashboard' && <StudentDashboard />}
         {activeView === 'instructor-dashboard' && <InstructorDashboard />}
         {activeView === 'admin-db' && <AdminDBExplorerModal />}
@@ -144,6 +149,7 @@ const MainContent: React.FC = () => {
       <AITutorDrawer />
       <ArrowAssistOverlay />
       <InteractiveVoiceAnimationModal />
+      <AICodeArchitectModal />
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
       <NoiseControlModal isOpen={isNoiseModalOpen} onClose={() => setIsNoiseModalOpen(false)} />
       <MultiplayerModal isOpen={isMultiplayerModalOpen} onClose={() => setIsMultiplayerModalOpen(false)} />

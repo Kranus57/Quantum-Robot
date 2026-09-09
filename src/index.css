@@ -4,23 +4,23 @@
 
 @layer base {
   body {
-    @apply bg-slate-50 text-slate-900 min-h-screen font-sans;
+    @apply bg-slate-50 text-slate-900 min-h-screen font-sans antialiased tracking-tight;
   }
 }
 
-/* Custom Scrollbars */
+/* Enterprise Custom Scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f8fafc;
+  background: #f1f5f9;
 }
 
 ::-webkit-scrollbar-thumb {
   background: #cbd5e1;
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -29,59 +29,59 @@
 
 /* Glassmorphism panel styling */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(226, 232, 240, 0.9);
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(226, 232, 240, 1);
 }
 
 .glass-card {
-  background: rgba(255, 255, 255, 1);
+  background: #ffffff;
   backdrop-filter: blur(8px);
-  border: 1px solid rgba(226, 232, 240, 1);
+  border: 1px solid #e2e8f0;
 }
 
 /* Professional grid background pattern - Light Theme */
 .quantum-grid-bg {
-  background-size: 32px 32px;
+  background-size: 28px 28px;
   background-image: 
-    linear-gradient(to right, rgba(0, 0, 0, 0.04) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
+    linear-gradient(to right, rgba(15, 23, 42, 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.035) 1px, transparent 1px);
 }
 
-/* Quantum Gate styling - Light Theme */
+/* Enterprise Quantum Gate styling */
 .gate-btn {
-  @apply transition-all duration-150 cursor-grab active:cursor-grabbing font-mono font-bold rounded-md shadow-sm flex items-center justify-center select-none transform hover:-translate-y-0.5 active:translate-y-0;
+  @apply transition-all duration-150 cursor-grab active:cursor-grabbing font-mono font-bold rounded-lg shadow-sm flex items-center justify-center select-none transform hover:-translate-y-0.5 active:translate-y-0 text-xs;
 }
 
 .gate-h {
-  @apply bg-sky-50 text-sky-900 border border-sky-300 hover:bg-sky-100 hover:border-sky-400;
+  @apply bg-sky-50 text-sky-900 border border-sky-300 hover:bg-sky-100 hover:border-sky-400 hover:shadow;
 }
 
 .gate-x {
-  @apply bg-indigo-50 text-indigo-900 border border-indigo-300 hover:bg-indigo-100 hover:border-indigo-400;
+  @apply bg-indigo-50 text-indigo-900 border border-indigo-300 hover:bg-indigo-100 hover:border-indigo-400 hover:shadow;
 }
 
 .gate-y {
-  @apply bg-purple-50 text-purple-900 border border-purple-300 hover:bg-purple-100 hover:border-purple-400;
+  @apply bg-purple-50 text-purple-900 border border-purple-300 hover:bg-purple-100 hover:border-purple-400 hover:shadow;
 }
 
 .gate-z {
-  @apply bg-blue-50 text-blue-900 border border-blue-300 hover:bg-blue-100 hover:border-blue-400;
+  @apply bg-blue-50 text-blue-900 border border-blue-300 hover:bg-blue-100 hover:border-blue-400 hover:shadow;
 }
 
 .gate-cnot {
-  @apply bg-emerald-50 text-emerald-900 border border-emerald-300 hover:bg-emerald-100 hover:border-emerald-400;
+  @apply bg-emerald-50 text-emerald-900 border border-emerald-300 hover:bg-emerald-100 hover:border-emerald-400 hover:shadow;
 }
 
 .gate-toffoli {
-  @apply bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100 hover:border-amber-400;
+  @apply bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100 hover:border-amber-400 hover:shadow;
 }
 
 .gate-measure {
-  @apply bg-rose-50 text-rose-900 border border-rose-300 hover:bg-rose-100 hover:border-rose-400;
+  @apply bg-rose-50 text-rose-900 border border-rose-300 hover:bg-rose-100 hover:border-rose-400 hover:shadow;
 }
 
 .gate-phase {
-  @apply bg-violet-50 text-violet-900 border border-violet-300 hover:bg-violet-100 hover:border-violet-400;
+  @apply bg-violet-50 text-violet-900 border border-violet-300 hover:bg-violet-100 hover:border-violet-400 hover:shadow;
 }
