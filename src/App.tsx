@@ -14,6 +14,7 @@ import { AITutorDrawer } from './components/ai/AITutorDrawer';
 import { NoiseControlModal } from './components/workspace/NoiseControlModal';
 import { MultiplayerModal } from './components/workspace/MultiplayerModal';
 import { StudentDashboard } from './components/dashboard/StudentDashboard';
+import { StudentAnalysis } from './components/dashboard/StudentAnalysis';
 import { InstructorDashboard } from './components/dashboard/InstructorDashboard';
 import { AuthModal } from './components/auth/AuthModal';
 import { AdminDBExplorerModal } from './components/admin/AdminDBExplorerModal';
@@ -143,6 +144,7 @@ const MainContent: React.FC = () => {
         {activeView === 'learning-path' && <PersonalizedLearningPath />}
         {activeView === 'theory-math' && <AITheoryMathStudio />}
         {activeView === 'student-dashboard' && <StudentDashboard />}
+        {activeView === 'student-analysis' && <StudentAnalysis />}
         {activeView === 'instructor-dashboard' && <InstructorDashboard />}
         {activeView === 'admin-db' && <AdminDBExplorerModal />}
       </main>

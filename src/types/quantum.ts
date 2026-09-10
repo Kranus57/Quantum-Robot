@@ -1,4 +1,4 @@
-export type ActiveViewMode = 'workspace' | 'student-dashboard' | 'instructor-dashboard' | 'admin-db' | 'learning-path' | 'theory-math';
+export type ActiveViewMode = 'workspace' | 'student-dashboard' | 'student-analysis' | 'instructor-dashboard' | 'admin-db' | 'learning-path' | 'theory-math';
 
 export type UserRole = 'student' | 'admin';
 

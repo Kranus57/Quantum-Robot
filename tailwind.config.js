@@ -8,7 +8,7 @@ export default {
     extend: {
       colors: {
         quantum: {
-          bg: "#F8FAFC",         // Slate 50 Light Background
+          bg: "#FFFFFF",         // Pure Crisp White Background
           panel: "#FFFFFF",      // Pure White Panel
           border: "#E2E8F0",     // Slate 200 Border
           card: "#FFFFFF",       // White Card

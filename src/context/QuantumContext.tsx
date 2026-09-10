@@ -112,6 +112,9 @@ interface QuantumContextType {
   submitQuizAnswer: (lessonId: string, optionIndex: number) => boolean;
   fetchAdminDBData: () => Promise<DBTableSummary | null>;
   deleteUserFromDB: (userId: number) => Promise<boolean>;
+  inspectedStudent: { id: number; name: string } | null;
+  setInspectedStudent: (student: { id: number; name: string } | null) => void;
+  loadStudentCircuitIntoWorkspace: (studentGates: QuantumGate[], count: number, title?: string) => void;
 
   // Arrow Assist & AI Audio Tutor Guidance
   isArrowAssistActive: boolean;
@@ -379,13 +382,24 @@ export const QuantumProvider: React.FC<{ children: ReactNode }> = ({ children })
     });
   };
 
+  const [inspectedStudent, setInspectedStudent] = useState<{ id: number; name: string } | null>(null);
+
+  const loadStudentCircuitIntoWorkspace = (studentGates: QuantumGate[], count: number, title?: string) => {
+    if (count) setQubitCount(count);
+    if (Array.isArray(studentGates)) setGates(studentGates);
+    setActiveView('workspace');
+    addTerminalLog('info', `Loaded student study circuit '${title || 'Student Sandbox'}' into Lab Workspace for inspection.`);
+  };
+
   // Sync user object with localStorage and background
   useEffect(() => {
     if (user) {
       localStorage.setItem('quantum_user', JSON.stringify(user));
       setUserBackground(user.userBackground);
-      if (user.role === 'admin' && activeView === 'student-dashboard') {
+      if (user.role === 'admin' && activeView !== 'instructor-dashboard' && activeView !== 'admin-db') {
         setActiveView('instructor-dashboard');
+      } else if (user.role === 'student' && (activeView === 'instructor-dashboard' || activeView === 'admin-db')) {
+        setActiveView('student-dashboard');
       }
     } else {
       localStorage.removeItem('quantum_user');
@@ -1060,6 +1074,9 @@ export const QuantumProvider: React.FC<{ children: ReactNode }> = ({ children })
         submitQuizAnswer,
         fetchAdminDBData,
         deleteUserFromDB,
+        inspectedStudent,
+        setInspectedStudent,
+        loadStudentCircuitIntoWorkspace,
         isArrowAssistActive,
         setIsArrowAssistActive,
         arrowAssistStep,

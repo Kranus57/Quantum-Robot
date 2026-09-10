@@ -471,23 +471,23 @@ export const InteractiveVoiceAnimationModal: React.FC = () => {
   const wordsList = subtitleText.split(/\s+/);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
         
         {/* Top Header Bar */}
-        <div className="p-4 bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white flex items-center justify-between shadow-md">
+        <div className="p-4 bg-slate-50 border-b border-slate-200 text-slate-900 flex items-center justify-between shadow-sm">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center backdrop-blur-md">
-              <Mic className="w-5 h-5 text-cyan-400 animate-pulse" />
+            <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center">
+              <Mic className="w-5 h-5 text-blue-600 animate-pulse" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h2 className="font-bold text-base tracking-tight text-white">Interactive Quantum Voice & 3D Animation Studio</h2>
-                <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-400/30 font-mono">
+                <h2 className="font-bold text-base tracking-tight text-slate-900">Interactive Quantum Voice & 3D Animation Studio</h2>
+                <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200 font-mono">
                   LIVE AI VOICE & BLOCH SPHERE
                 </span>
               </div>
-              <p className="text-xs text-blue-200/80">Real-Time Text-to-Speech Physics Narration with 3D State Vector Rotations</p>
+              <p className="text-xs text-slate-500">Real-Time Text-to-Speech Physics Narration with 3D State Vector Rotations</p>
             </div>
           </div>
 
@@ -496,7 +496,7 @@ export const InteractiveVoiceAnimationModal: React.FC = () => {
               if (synthRef.current) synthRef.current.cancel();
               setIsVoiceAnimationModalOpen(false);
             }}
-            className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition-colors"
           >
             <X className="w-6 h-6" />
           </button>

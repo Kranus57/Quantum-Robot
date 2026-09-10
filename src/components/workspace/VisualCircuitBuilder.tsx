@@ -87,7 +87,7 @@ export const VisualCircuitBuilder: React.FC = () => {
   };
 
   return (
-    <div id="circuit-builder-panel" className="h-full flex flex-col bg-slate-50 overflow-hidden">
+    <div id="circuit-builder-panel" className="h-full flex flex-col bg-white overflow-hidden">
       {/* Gate Palette Bar */}
       <div className="p-3 bg-white border-b border-slate-200 flex items-center justify-between shadow-sm">
         <div className="flex items-center space-x-2">

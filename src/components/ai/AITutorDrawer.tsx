@@ -93,22 +93,22 @@ export const AITutorDrawer: React.FC = () => {
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
 
         {/* Launch Interactive Voice & 3D Animation Studio CTA Banner */}
-        <div className="p-3.5 rounded-xl bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white shadow-md space-y-2 border border-blue-800/40">
+        <div className="p-3.5 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 text-slate-900 shadow-sm space-y-2 border border-blue-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <Mic className="w-4 h-4 text-cyan-400 animate-pulse" />
-              <span className="text-xs font-bold text-cyan-300">Voice & 3D Animation Explainer</span>
+              <Mic className="w-4 h-4 text-blue-600 animate-pulse" />
+              <span className="text-xs font-bold text-blue-900">Voice & 3D Animation Explainer</span>
             </div>
-            <span className="text-[9px] font-mono font-semibold px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-400/30">
+            <span className="text-[9px] font-mono font-semibold px-2 py-0.5 rounded bg-blue-100 text-blue-800 border border-blue-200">
               AUDIO & BLOCH
             </span>
           </div>
-          <p className="text-[11px] text-blue-100/90 leading-tight">
+          <p className="text-[11px] text-slate-700 leading-tight">
             Listen to live Text-to-Speech voice physics narration synchronized with 3D Bloch sphere vector animations & probability collapse!
           </p>
           <button
             onClick={() => setIsVoiceAnimationModalOpen(true)}
-            className="w-full py-1.5 px-3 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs transition-all shadow-md flex items-center justify-center space-x-1.5 active:scale-95"
+            className="w-full py-1.5 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all shadow-sm flex items-center justify-center space-x-1.5 active:scale-95"
           >
             <Mic className="w-3.5 h-3.5 fill-current" />
             <span>Launch Interactive Voice Studio</span>
