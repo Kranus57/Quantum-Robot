@@ -64,3 +64,22 @@ class CohortAttemptModel(Base):
     score = Column(Float, nullable=False)
     status = Column(String, default="passed") # passed, failed
     timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+
+class ModuleTestResultModel(Base):
+    __tablename__ = "module_test_results"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    student_name = Column(String, nullable=False)
+    module_id = Column(String, index=True, nullable=False)
+    module_title = Column(String, nullable=False)
+    mcq_score = Column(Float, nullable=False, default=0.0)
+    circuit_score = Column(Float, nullable=False, default=0.0)
+    code_score = Column(Float, nullable=False, default=0.0)
+    total_score = Column(Float, nullable=False, default=0.0)
+    max_possible_score = Column(Float, nullable=False, default=100.0)
+    percentage = Column(Float, nullable=False, default=0.0)
+    status = Column(String, default="passed") # passed, needs_review
+    details_json = Column(JSON, nullable=True) # Full breakdown of MCQ choices, drawn circuit, and submitted code
+    submitted_at = Column(DateTime, default=datetime.datetime.utcnow)
+

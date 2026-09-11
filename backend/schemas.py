@@ -66,3 +66,14 @@ class UserResponseSchema(BaseModel):
 class DBTableQuerySchema(BaseModel):
     tableName: str = "users"
     limit: int = 50
+
+class ModuleTestSubmitSchema(BaseModel):
+    userId: Optional[int] = 1
+    studentName: Optional[str] = "Alex Rivera"
+    moduleId: str
+    moduleTitle: str
+    mcqAnswers: Dict[str, int]  # e.g., {"q1": 1, "q2": 0, ...}
+    circuitGates: List[GateOperationSchema]
+    circuitQubitCount: int = 2
+    codeSnippet: str
+

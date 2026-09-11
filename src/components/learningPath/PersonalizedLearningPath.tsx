@@ -37,7 +37,8 @@ export const PersonalizedLearningPath: React.FC = () => {
     setLearningPace, 
     pathSummary, 
     launchPathNode,
-    setActiveView
+    setActiveView,
+    openModuleTest
   } = useQuantum();
 
   const [selectedInspectNode, setSelectedInspectNode] = useState<PersonalizedPathNode | null>(null);
@@ -367,6 +368,14 @@ export const PersonalizedLearningPath: React.FC = () => {
                       >
                         <Info className="w-3.5 h-3.5 text-blue-600" />
                         <span>Inspect Preview</span>
+                      </button>
+
+                      <button
+                        onClick={() => openModuleTest(node.lessonId, node.title)}
+                        className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold text-xs shadow-md transition-all flex items-center space-x-1.5 active:scale-95 border border-white/20"
+                      >
+                        <Zap className="w-3.5 h-3.5 fill-white" />
+                        <span>Take Agentic AI Test</span>
                       </button>
 
                       <button

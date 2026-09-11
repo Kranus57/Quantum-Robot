@@ -135,6 +135,11 @@ interface QuantumContextType {
   setIsCodeArchitectOpen: (open: boolean) => void;
   generateCodeWithAI: (prompt: string, targetFw?: Framework) => Promise<void>;
   debugCodeWithAI: () => Promise<void>;
+
+  // Agentic AI Module Test Modal
+  activeTestModal: { isOpen: boolean; moduleId: string; moduleTitle: string };
+  openModuleTest: (moduleId: string, moduleTitle: string) => void;
+  closeModuleTest: () => void;
 }
 
 const QuantumContext = createContext<QuantumContextType | undefined>(undefined);
@@ -229,6 +234,21 @@ export const QuantumProvider: React.FC<{ children: ReactNode }> = ({ children })
     { id: 'log-2', timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), type: 'info', message: 'Statevector matrix simulation pipeline active.' }
   ]);
   const [isCodeArchitectOpen, setIsCodeArchitectOpen] = useState<boolean>(false);
+
+  // Agentic AI Module Test Modal State
+  const [activeTestModal, setActiveTestModal] = useState<{ isOpen: boolean; moduleId: string; moduleTitle: string }>({
+    isOpen: false,
+    moduleId: 'lesson-1',
+    moduleTitle: '1. Qubit Fundamentals & Superposition'
+  });
+
+  const openModuleTest = (moduleId: string, moduleTitle: string) => {
+    setActiveTestModal({ isOpen: true, moduleId, moduleTitle });
+  };
+
+  const closeModuleTest = () => {
+    setActiveTestModal(prev => ({ ...prev, isOpen: false }));
+  };
 
   const addTerminalLog = (type: TerminalLogEntry['type'], message: string, codeHint?: string) => {
     const newLog: TerminalLogEntry = {
@@ -1090,7 +1110,10 @@ export const QuantumProvider: React.FC<{ children: ReactNode }> = ({ children })
         isCodeArchitectOpen,
         setIsCodeArchitectOpen,
         generateCodeWithAI,
-        debugCodeWithAI
+        debugCodeWithAI,
+        activeTestModal,
+        openModuleTest,
+        closeModuleTest
       }}
     >
       {children}

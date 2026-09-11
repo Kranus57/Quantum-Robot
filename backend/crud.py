@@ -2,7 +2,7 @@ import uuid
 import hashlib
 import datetime
 from sqlalchemy.orm import Session
-from backend.models import User, QuantumCircuitModel, StudentProgressModel, BadgeModel, CohortAttemptModel
+from backend.models import User, QuantumCircuitModel, StudentProgressModel, BadgeModel, CohortAttemptModel, ModuleTestResultModel
 
 def _hash_pass(password: str) -> str:
     return hashlib.sha256(password.encode('utf-8')).hexdigest()
@@ -148,6 +148,46 @@ def get_cohort_attempts(db: Session, limit: int = 10):
         return mock_attempts
     return attempts
 
+def save_module_test_result(
+    db: Session,
+    user_id: int,
+    student_name: str,
+    module_id: str,
+    module_title: str,
+    mcq_score: float,
+    circuit_score: float,
+    code_score: float,
+    total_score: float,
+    max_possible_score: float,
+    percentage: float,
+    status: str,
+    details_json: dict
+):
+    result = ModuleTestResultModel(
+        user_id=user_id,
+        student_name=student_name,
+        module_id=module_id,
+        module_title=module_title,
+        mcq_score=mcq_score,
+        circuit_score=circuit_score,
+        code_score=code_score,
+        total_score=total_score,
+        max_possible_score=max_possible_score,
+        percentage=percentage,
+        status=status,
+        details_json=details_json
+    )
+    db.add(result)
+    db.commit()
+    db.refresh(result)
+    return result
+
+def get_user_module_test_results(db: Session, user_id: int):
+    return db.query(ModuleTestResultModel).filter(ModuleTestResultModel.user_id == user_id).order_by(ModuleTestResultModel.submitted_at.desc()).all()
+
+def get_all_module_test_results(db: Session, limit: int = 50):
+    return db.query(ModuleTestResultModel).order_by(ModuleTestResultModel.submitted_at.desc()).limit(limit).all()
+
 def get_database_summary(db: Session):
     """Retrieve counts and table rows for Admin DB Explorer"""
     users = db.query(User).order_by(User.created_at.desc()).all()
@@ -155,6 +195,7 @@ def get_database_summary(db: Session):
     progress = db.query(StudentProgressModel).order_by(StudentProgressModel.completed_at.desc()).all()
     badges = db.query(BadgeModel).order_by(BadgeModel.unlocked_at.desc()).all()
     attempts = db.query(CohortAttemptModel).order_by(CohortAttemptModel.timestamp.desc()).all()
+    test_results = db.query(ModuleTestResultModel).order_by(ModuleTestResultModel.submitted_at.desc()).all()
 
     return {
         "stats": {
@@ -163,6 +204,7 @@ def get_database_summary(db: Session):
             "total_progress_records": len(progress),
             "total_badges": len(badges),
             "total_attempts": len(attempts),
+            "total_module_tests": len(test_results),
             "db_engine": "SQLite / PostgreSQL (SQLAlchemy ORM Active)"
         },
         "tables": {
@@ -215,6 +257,22 @@ def get_database_summary(db: Session):
                     "status": a.status,
                     "timestamp": a.timestamp.strftime("%Y-%m-%d %H:%M:%S") if a.timestamp else ""
                 } for a in attempts
+            ],
+            "module_test_results": [
+                {
+                    "id": t.id,
+                    "user_id": t.user_id,
+                    "student_name": t.student_name,
+                    "module_id": t.module_id,
+                    "module_title": t.module_title,
+                    "mcq_score": t.mcq_score,
+                    "circuit_score": t.circuit_score,
+                    "code_score": t.code_score,
+                    "total_score": t.total_score,
+                    "percentage": t.percentage,
+                    "status": t.status,
+                    "submitted_at": t.submitted_at.strftime("%Y-%m-%d %H:%M:%S") if t.submitted_at else ""
+                } for t in test_results
             ]
         }
     }

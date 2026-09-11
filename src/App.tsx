@@ -23,6 +23,7 @@ import { AITheoryMathStudio } from './components/theoryMath/AITheoryMathStudio';
 import { ArrowAssistOverlay } from './components/workspace/ArrowAssistOverlay';
 import { InteractiveVoiceAnimationModal } from './components/workspace/InteractiveVoiceAnimationModal';
 import { AICodeArchitectModal } from './components/ai/AICodeArchitectModal';
+import { ModuleAgenticTestModal } from './components/assessment/ModuleAgenticTestModal';
 import { Cpu, Code2, Globe, Network } from 'lucide-react';
 
 const WorkspaceLayout: React.FC = () => {
@@ -129,7 +130,9 @@ const MainContent: React.FC = () => {
     isMultiplayerModalOpen, 
     setIsMultiplayerModalOpen,
     isAuthModalOpen,
-    setIsAuthModalOpen
+    setIsAuthModalOpen,
+    activeTestModal,
+    closeModuleTest
   } = useQuantum();
 
   if (!user) {
@@ -155,6 +158,12 @@ const MainContent: React.FC = () => {
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
       <NoiseControlModal isOpen={isNoiseModalOpen} onClose={() => setIsNoiseModalOpen(false)} />
       <MultiplayerModal isOpen={isMultiplayerModalOpen} onClose={() => setIsMultiplayerModalOpen(false)} />
+      <ModuleAgenticTestModal
+        isOpen={activeTestModal.isOpen}
+        moduleId={activeTestModal.moduleId}
+        moduleTitle={activeTestModal.moduleTitle}
+        onClose={closeModuleTest}
+      />
     </div>
   );
 };

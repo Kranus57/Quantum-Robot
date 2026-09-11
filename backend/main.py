@@ -12,7 +12,8 @@ from backend.schemas import (
     UserLoginSchema,
     GoogleAuthSchema,
     TwilioSendOtpSchema,
-    TwilioVerifyOtpSchema
+    TwilioVerifyOtpSchema,
+    ModuleTestSubmitSchema
 )
 from backend.database import Base, engine, get_db, auto_migrate_schema
 from backend import crud
@@ -320,6 +321,103 @@ def ai_debug(req: AIDebugRequestSchema):
 def ai_optimize(req: AIOptimizeRequestSchema):
     gates_dict = [g.dict() for g in req.gates]
     return AIEngine.optimize_circuit(req.qubitCount, gates_dict)
+
+# Agentic AI Automated Module Test Endpoints
+@app.get("/api/test/generate/{module_id}")
+def generate_module_test(module_id: str):
+    return AIEngine.generate_module_test(module_id)
+
+@app.post("/api/test/submit")
+def submit_module_test(payload: ModuleTestSubmitSchema, db: Session = Depends(get_db)):
+    gates_dict = [g.dict() for g in payload.circuitGates]
+    
+    # 1. AI Evaluation
+    evaluation = AIEngine.grade_module_test(
+        module_id=payload.moduleId,
+        mcq_answers=payload.mcqAnswers,
+        circuit_gates=gates_dict,
+        circuit_qubit_count=payload.circuitQubitCount,
+        code_snippet=payload.codeSnippet
+    )
+    
+    # 2. Details JSON payload to persist full attempt trace
+    details = {
+        "mcqAnswers": payload.mcqAnswers,
+        "circuitGates": gates_dict,
+        "codeSnippet": payload.codeSnippet,
+        "mcqFeedback": evaluation.get("mcqFeedback", []),
+        "circuitNotes": evaluation.get("circuitNotes", []),
+        "codeNotes": evaluation.get("codeNotes", []),
+        "aiSummary": evaluation.get("aiSummary", "")
+    }
+
+    # 3. Save to DB
+    saved_record = crud.save_module_test_result(
+        db=db,
+        user_id=payload.userId or 1,
+        student_name=payload.studentName or "Alex Rivera",
+        module_id=payload.moduleId,
+        module_title=payload.moduleTitle,
+        mcq_score=evaluation["mcqScore"],
+        circuit_score=evaluation["circuitScore"],
+        code_score=evaluation["codeScore"],
+        total_score=evaluation["totalScore"],
+        max_possible_score=evaluation["maxPossibleScore"],
+        percentage=evaluation["percentage"],
+        status=evaluation["status"],
+        details_json=details
+    )
+
+    return {
+        "status": "success",
+        "id": saved_record.id,
+        "evaluation": evaluation,
+        "submittedAt": saved_record.submitted_at.strftime("%Y-%m-%d %H:%M:%S") if saved_record.submitted_at else ""
+    }
+
+@app.get("/api/test/results/user/{user_id}")
+def get_user_module_test_results(user_id: int, db: Session = Depends(get_db)):
+    results = crud.get_user_module_test_results(db, user_id=user_id)
+    return [
+        {
+            "id": r.id,
+            "user_id": r.user_id,
+            "student_name": r.student_name,
+            "module_id": r.module_id,
+            "module_title": r.module_title,
+            "mcq_score": r.mcq_score,
+            "circuit_score": r.circuit_score,
+            "code_score": r.code_score,
+            "total_score": r.total_score,
+            "max_possible_score": r.max_possible_score,
+            "percentage": r.percentage,
+            "status": r.status,
+            "details_json": r.details_json,
+            "submitted_at": r.submitted_at.strftime("%Y-%m-%d %H:%M:%S") if r.submitted_at else ""
+        } for r in results
+    ]
+
+@app.get("/api/test/results/all")
+def get_all_module_test_results(limit: int = 50, db: Session = Depends(get_db)):
+    results = crud.get_all_module_test_results(db, limit=limit)
+    return [
+        {
+            "id": r.id,
+            "user_id": r.user_id,
+            "student_name": r.student_name,
+            "module_id": r.module_id,
+            "module_title": r.module_title,
+            "mcq_score": r.mcq_score,
+            "circuit_score": r.circuit_score,
+            "code_score": r.code_score,
+            "total_score": r.total_score,
+            "max_possible_score": r.max_possible_score,
+            "percentage": r.percentage,
+            "status": r.status,
+            "details_json": r.details_json,
+            "submitted_at": r.submitted_at.strftime("%Y-%m-%d %H:%M:%S") if r.submitted_at else ""
+        } for r in results
+    ]
 
 @app.websocket("/ws/collaborate/{session_id}")
 async def websocket_endpoint(websocket: WebSocket, session_id: str):

@@ -35,6 +35,10 @@ export const InstructorDashboard: React.FC = () => {
   const [dbData, setDbData] = useState<DBTableSummary | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   
+  // Module Test Results State
+  const [moduleTestResults, setModuleTestResults] = useState<any[]>([]);
+  const [selectedTestAttempt, setSelectedTestAttempt] = useState<any | null>(null);
+
   // Selected Student Study Modal State
   const [selectedStudentStudy, setSelectedStudentStudy] = useState<StudentStudyDetail | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
@@ -46,6 +50,10 @@ export const InstructorDashboard: React.FC = () => {
     if (data) {
       setDbData(data);
     }
+    fetch('/api/test/results/all')
+      .then(res => res.ok ? res.json() : [])
+      .then(tests => setModuleTestResults(tests))
+      .catch(err => console.warn('Could not load test results:', err));
     setIsLoading(false);
   };
 
@@ -245,6 +253,127 @@ export const InstructorDashboard: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* NEW: Agentic AI Module Test Marks & Submissions Table */}
+      <div className="p-5 rounded-2xl bg-white border border-slate-200 space-y-4 shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+          <div>
+            <h3 className="font-bold text-base text-slate-900 flex items-center space-x-2">
+              <Sparkles className="w-5 h-5 text-indigo-600" />
+              <span>Agentic AI Automated Module Test Marks</span>
+              <span className="px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-mono font-bold">
+                8 MCQs + 1 Circuit + 1 Code Task
+              </span>
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Live automated test submissions graded by Agentic AI and persisted in DB.
+            </p>
+          </div>
+        </div>
+
+        {moduleTestResults.length === 0 ? (
+          <div className="p-8 text-center text-xs text-slate-500 bg-slate-50 rounded-xl border border-slate-200 font-medium">
+            No module test attempts submitted by students yet.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs font-mono">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50 text-slate-600 font-bold uppercase text-[11px]">
+                  <th className="p-3">Student</th>
+                  <th className="p-3">Module Title</th>
+                  <th className="p-3">MCQ Score (40)</th>
+                  <th className="p-3">Circuit Score (30)</th>
+                  <th className="p-3">Code Score (30)</th>
+                  <th className="p-3">Total Marks</th>
+                  <th className="p-3">Status</th>
+                  <th className="p-3 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {moduleTestResults.map((t: any) => (
+                  <tr key={t.id} className="hover:bg-slate-50/80 transition-all">
+                    <td className="p-3 font-bold text-slate-900">{t.student_name}</td>
+                    <td className="p-3 text-slate-700 font-medium">{t.module_title}</td>
+                    <td className="p-3 text-cyan-600 font-bold">{t.mcq_score}/40</td>
+                    <td className="p-3 text-indigo-600 font-bold">{t.circuit_score}/30</td>
+                    <td className="p-3 text-purple-600 font-bold">{t.code_score}/30</td>
+                    <td className="p-3 font-black text-slate-900">{t.total_score}/100 ({t.percentage}%)</td>
+                    <td className="p-3">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                        t.status === 'passed' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                      }`}>
+                        {t.status === 'passed' ? 'Passed 🎉' : 'Review'}
+                      </span>
+                    </td>
+                    <td className="p-3 text-right">
+                      <button
+                        onClick={() => setSelectedTestAttempt(t)}
+                        className="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] transition-all flex items-center space-x-1 shadow-sm ml-auto"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>Inspect Attempt</span>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Selected Test Attempt Modal Inspector */}
+      {selectedTestAttempt && (
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 text-white rounded-3xl shadow-2xl border border-slate-800 max-w-3xl w-full max-h-[85vh] flex flex-col overflow-hidden">
+            <div className="p-5 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border-b border-slate-800 flex items-center justify-between">
+              <div>
+                <span className="text-xs font-mono text-cyan-400 font-bold">TEACHER ATTEMPT INSPECTOR</span>
+                <h3 className="text-lg font-bold text-white">
+                  {selectedTestAttempt.student_name} - {selectedTestAttempt.module_title}
+                </h3>
+              </div>
+              <button
+                onClick={() => setSelectedTestAttempt(null)}
+                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-6">
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+                <div>
+                  <div className="text-xs text-slate-400">Total Score</div>
+                  <div className="text-2xl font-black text-emerald-400">{selectedTestAttempt.total_score} / 100 ({selectedTestAttempt.percentage}%)</div>
+                </div>
+                <div className="flex space-x-3 text-xs font-mono">
+                  <span className="px-3 py-1 bg-cyan-950 text-cyan-300 border border-cyan-500/30 rounded-lg">MCQ: {selectedTestAttempt.mcq_score}/40</span>
+                  <span className="px-3 py-1 bg-indigo-950 text-indigo-300 border border-indigo-500/30 rounded-lg">Circuit: {selectedTestAttempt.circuit_score}/30</span>
+                  <span className="px-3 py-1 bg-purple-950 text-purple-300 border border-purple-500/30 rounded-lg">Code: {selectedTestAttempt.code_score}/30</span>
+                </div>
+              </div>
+
+              {/* Submitted Circuit Gates */}
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                <h4 className="text-xs font-bold text-indigo-300 font-mono">Student Drawn Circuit Gates</h4>
+                <pre className="p-3 bg-slate-900 rounded-xl text-xs font-mono text-cyan-300 overflow-x-auto">
+                  {JSON.stringify(selectedTestAttempt.details_json?.circuitGates || [], null, 2)}
+                </pre>
+              </div>
+
+              {/* Submitted Code Snippet */}
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                <h4 className="text-xs font-bold text-purple-300 font-mono">Student Submitted Code Snippet</h4>
+                <pre className="p-3 bg-slate-900 rounded-xl text-xs font-mono text-cyan-200 overflow-x-auto">
+                  {selectedTestAttempt.details_json?.codeSnippet || "# No code provided"}
+                </pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Teacher Student Study Inspection Modal */}
       {isModalOpen && selectedStudentStudy && (

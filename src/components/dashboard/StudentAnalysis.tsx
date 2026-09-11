@@ -243,6 +243,85 @@ export const StudentAnalysis: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* NEW: Agentic AI Automated Module Test Scores Card */}
+      <div className="p-6 rounded-2xl bg-white border border-slate-200 space-y-4 shadow-sm">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <h3 className="font-bold text-base text-slate-900 flex items-center space-x-2">
+            <Sparkles className="w-5 h-5 text-indigo-600" />
+            <span>Agentic AI Automated Module Test Marks</span>
+            <span className="px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-mono font-bold">
+              Database Synced
+            </span>
+          </h3>
+          <span className="text-xs text-slate-500 font-mono">100 Marks Total (8 MCQs + 1 Circuit + 1 Code)</span>
+        </div>
+
+        <StudentTestResultsList userId={inspectedStudent ? inspectedStudent.id : (user?.id || 1)} />
+      </div>
+    </div>
+  );
+};
+
+const StudentTestResultsList: React.FC<{ userId: number }> = ({ userId }) => {
+  const [testResults, setTestResults] = React.useState<any[]>([]);
+  const [isLoading, setIsLoading] = React.useState<boolean>(true);
+
+  React.useEffect(() => {
+    setIsLoading(true);
+    fetch(`/api/test/results/user/${userId}`)
+      .then(res => res.ok ? res.json() : [])
+      .then(data => setTestResults(data))
+      .catch(e => console.warn('Could not fetch test scores:', e))
+      .finally(() => setIsLoading(false));
+  }, [userId]);
+
+  if (isLoading) {
+    return <div className="text-xs text-slate-400 font-mono p-4">Loading saved module test marks from DB...</div>;
+  }
+
+  if (testResults.length === 0) {
+    return (
+      <div className="p-6 text-center text-xs text-slate-500 bg-slate-50 rounded-xl border border-slate-200 font-medium">
+        No Agentic AI Module Tests completed yet. Take tests from the Personalized Roadmap to evaluate your skills!
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-left text-xs font-mono">
+        <thead>
+          <tr className="border-b border-slate-200 bg-slate-50 text-slate-600 font-bold uppercase text-[11px]">
+            <th className="p-3">Module / Chapter Title</th>
+            <th className="p-3">8 MCQs (40)</th>
+            <th className="p-3">Circuit Task (30)</th>
+            <th className="p-3">Code Task (30)</th>
+            <th className="p-3">Total Score</th>
+            <th className="p-3">Status</th>
+            <th className="p-3 text-right">Date</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-100">
+          {testResults.map((tr) => (
+            <tr key={tr.id} className="hover:bg-slate-50/80 transition-all">
+              <td className="p-3 font-bold text-slate-900">{tr.module_title}</td>
+              <td className="p-3 text-cyan-600 font-bold">{tr.mcq_score}/40</td>
+              <td className="p-3 text-indigo-600 font-bold">{tr.circuit_score}/30</td>
+              <td className="p-3 text-purple-600 font-bold">{tr.code_score}/30</td>
+              <td className="p-3 font-black text-slate-900">{tr.total_score}/100 ({tr.percentage}%)</td>
+              <td className="p-3">
+                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                  tr.status === 'passed' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                }`}>
+                  {tr.status === 'passed' ? 'Passed 🎉' : 'Needs Practice'}
+                </span>
+              </td>
+              <td className="p-3 text-right text-slate-500 text-[11px]">{tr.submitted_at}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 };
