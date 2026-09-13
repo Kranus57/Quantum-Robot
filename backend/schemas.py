@@ -18,6 +18,8 @@ class CircuitRequestSchema(BaseModel):
 
 class AIExplainRequestSchema(BaseModel):
     concept: Optional[str] = None
+    query: Optional[str] = None
+    userBackground: Optional[str] = "cs-undergrad"
     circuit: Optional[CircuitRequestSchema] = None
 
 class AIDebugRequestSchema(BaseModel):

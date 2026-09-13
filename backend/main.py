@@ -1,33 +1,66 @@
+import os
+import sys
+
+# Ensure root directory and backend directory are in sys.path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 import time
 
-from backend.schemas import (
-    CircuitRequestSchema,
-    AIExplainRequestSchema,
-    AIDebugRequestSchema,
-    AIOptimizeRequestSchema,
-    UserRegisterSchema,
-    UserLoginSchema,
-    GoogleAuthSchema,
-    TwilioSendOtpSchema,
-    TwilioVerifyOtpSchema,
-    ModuleTestSubmitSchema
-)
-from backend.database import Base, engine, get_db, auto_migrate_schema
-from backend import crud
-from backend.drivers.native_simulator import NativeQuantumSimulator
-from backend.drivers.qiskit_driver import QiskitDriver
-from backend.drivers.cirq_driver import CirqDriver
-from backend.drivers.pennylane_driver import PennyLaneDriver
-from backend.drivers.qbraid_driver import QBraidDriver
-from backend.ai_engine import AIEngine
-from backend.websocket_server import manager
+try:
+    from backend.schemas import (
+        CircuitRequestSchema,
+        AIExplainRequestSchema,
+        AIDebugRequestSchema,
+        AIOptimizeRequestSchema,
+        UserRegisterSchema,
+        UserLoginSchema,
+        GoogleAuthSchema,
+        TwilioSendOtpSchema,
+        TwilioVerifyOtpSchema,
+        ModuleTestSubmitSchema
+    )
+    from backend.database import Base, engine, get_db, init_db, check_db_health, get_mongo_db
+    from backend import crud
+    from backend.drivers.native_simulator import NativeQuantumSimulator
+    from backend.drivers.qiskit_driver import QiskitDriver
+    from backend.drivers.cirq_driver import CirqDriver
+    from backend.drivers.pennylane_driver import PennyLaneDriver
+    from backend.drivers.qbraid_driver import QBraidDriver
+    from backend.ai_engine import AIEngine
+    from backend.websocket_server import manager
+except ModuleNotFoundError:
+    from schemas import (
+        CircuitRequestSchema,
+        AIExplainRequestSchema,
+        AIDebugRequestSchema,
+        AIOptimizeRequestSchema,
+        UserRegisterSchema,
+        UserLoginSchema,
+        GoogleAuthSchema,
+        TwilioSendOtpSchema,
+        TwilioVerifyOtpSchema,
+        ModuleTestSubmitSchema
+    )
+    from database import Base, engine, get_db, init_db, check_db_health, get_mongo_db
+    import crud
+    from drivers.native_simulator import NativeQuantumSimulator
+    from drivers.qiskit_driver import QiskitDriver
+    from drivers.cirq_driver import CirqDriver
+    from drivers.pennylane_driver import PennyLaneDriver
+    from drivers.qbraid_driver import QBraidDriver
+    from ai_engine import AIEngine
+    from websocket_server import manager
 
-# Auto-migrate schema and create database tables on startup
-auto_migrate_schema()
-Base.metadata.create_all(bind=engine)
+# Initialize database schema and table migrations cleanly
+init_db()
 
 app = FastAPI(
     title="QuantumEdu AI API Engine",
@@ -57,6 +90,12 @@ def health_check():
         "supported_frameworks": ["qiskit", "cirq", "pennylane", "native"],
         "multiplayer_ws": "ws://localhost:8000/ws/collaborate/{session_id}"
     }
+
+@app.get("/api/db/health")
+def db_health_check():
+    """Detailed operational health endpoint for RDBMS and MongoDB"""
+    return check_db_health()
+
 
 # Authentication Routes
 @app.post("/api/auth/register")
@@ -111,18 +150,16 @@ def google_auth(payload: GoogleAuthSchema, db: Session = Depends(get_db)):
         }
     }
 
-# Twilio SMS OTP Authentication Routes
+# Mobile SMS OTP Authentication Routes
 @app.post("/api/auth/twilio/send-otp")
 def send_twilio_otp(payload: TwilioSendOtpSchema):
     phone_clean = payload.phoneNumber.strip()
     if len(phone_clean) < 7:
         raise HTTPException(status_code=400, detail="Invalid phone number format.")
     
-    # In production, dispatch Twilio REST API SMS request:
-    # twilio_client.messages.create(body=f"Your QuantumEdu AI verification code is 123456", to=phone_clean, from_=TWILIO_PHONE)
     return {
         "status": "success",
-        "message": f"Verification SMS OTP dispatched to {payload.countryCode} {phone_clean}. Use code '123456' for verification.",
+        "message": f"Verification SMS OTP sent to {payload.countryCode} {phone_clean}. Use code '123456' for verification.",
         "phoneNumber": phone_clean,
         "countryCode": payload.countryCode
     }
@@ -309,7 +346,12 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
 @app.post("/api/ai/explain")
 def ai_explain(req: AIExplainRequestSchema):
     circuit_info = req.circuit.dict() if req.circuit else None
-    explanation = AIEngine.explain_concept(req.concept, circuit_info)
+    explanation = AIEngine.explain_concept(
+        concept=req.concept,
+        query=req.query,
+        user_background=req.userBackground or "cs-undergrad",
+        circuit_info=circuit_info
+    )
     return {"explanation": explanation}
 
 @app.post("/api/ai/debug")
@@ -321,6 +363,16 @@ def ai_debug(req: AIDebugRequestSchema):
 def ai_optimize(req: AIOptimizeRequestSchema):
     gates_dict = [g.dict() for g in req.gates]
     return AIEngine.optimize_circuit(req.qubitCount, gates_dict)
+
+@app.post("/api/ai/optimize-and-debug")
+def ai_optimize_and_debug(req: AIDebugRequestSchema):
+    gates_dict = [g.dict() for g in req.gates]
+    debug_res = AIEngine.debug_circuit(req.qubitCount, gates_dict)
+    optimize_res = AIEngine.optimize_circuit(req.qubitCount, gates_dict)
+    return {
+        "debug": debug_res,
+        "optimize": optimize_res
+    }
 
 # Agentic AI Automated Module Test Endpoints
 @app.get("/api/test/generate/{module_id}")

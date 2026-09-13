@@ -182,20 +182,22 @@ export const CurriculumPanel: React.FC = () => {
           </div>
 
           {quizSubmitted && quizFeedback && (
-            <div className={`p-3 rounded-lg text-xs space-y-1 ${
+            <div className={`p-4 rounded-xl text-xs space-y-3 shadow-sm ${
               quizFeedback.isCorrect 
-                ? 'bg-emerald-50 border border-emerald-200 text-emerald-800' 
+                ? 'bg-emerald-50 border border-emerald-300 text-emerald-900' 
                 : 'bg-rose-50 border border-rose-200 text-rose-800'
             }`}>
-              <div className="font-bold flex items-center space-x-1.5">
-                {quizFeedback.isCorrect ? (
-                  <>
-                    <CheckCircle className="w-4 h-4 text-emerald-600" />
-                    <span>Correct Answer! +100 XP</span>
-                  </>
-                ) : (
-                  <span>Incorrect. Review explanation below:</span>
-                )}
+              <div className="font-bold flex items-center justify-between">
+                <span className="flex items-center space-x-1.5">
+                  {quizFeedback.isCorrect ? (
+                    <>
+                      <CheckCircle className="w-4 h-4 text-emerald-600" />
+                      <span>Module Solved & Verified! +100 XP</span>
+                    </>
+                  ) : (
+                    <span>Incorrect Answer. Review explanation below:</span>
+                  )}
+                </span>
               </div>
               <p className="text-[11px] leading-relaxed text-slate-700">{quizFeedback.explanation}</p>
             </div>

@@ -97,8 +97,8 @@ interface QuantumContextType {
   // AI Tutor System
   aiDrawerOpen: boolean;
   setAiDrawerOpen: (open: boolean) => void;
-  aiTab: 'explain' | 'debug' | 'optimize';
-  setAiTab: (tab: 'explain' | 'debug' | 'optimize') => void;
+  aiTab: 'explain' | 'debug' | 'optimize' | 'optimize-debug';
+  setAiTab: (tab: 'explain' | 'debug' | 'optimize' | 'optimize-debug') => void;
   aiExplanation: string | null;
   aiDebugResult: AIDebugResult | null;
   aiOptimizationResult: AIOptimizationResult | null;
@@ -106,6 +106,8 @@ interface QuantumContextType {
   runAiExplain: (concept?: string) => Promise<void>;
   runAiDebug: () => Promise<void>;
   runAiOptimize: () => Promise<void>;
+  runAiOptimizeAndDebug: () => Promise<void>;
+  applyOptimizationToCircuit: () => void;
 
   // Analytics & Student Progress
   studentProgress: StudentProgress;
@@ -210,7 +212,7 @@ export const QuantumProvider: React.FC<{ children: ReactNode }> = ({ children })
   // AI Tutor state
   const [aiDrawerOpen, setAiDrawerOpen] = useState<boolean>(false);
   const [isVoiceAnimationModalOpen, setIsVoiceAnimationModalOpen] = useState<boolean>(false);
-  const [aiTab, setAiTab] = useState<'explain' | 'debug' | 'optimize'>('explain');
+  const [aiTab, setAiTab] = useState<'explain' | 'debug' | 'optimize' | 'optimize-debug'>('explain');
   const [aiExplanation, setAiExplanation] = useState<string | null>(null);
   const [aiDebugResult, setAiDebugResult] = useState<AIDebugResult | null>(null);
   const [aiOptimizationResult, setAiOptimizationResult] = useState<AIOptimizationResult | null>(null);
@@ -661,7 +663,7 @@ export const QuantumProvider: React.FC<{ children: ReactNode }> = ({ children })
           userBackground: (data.user.userBackground || 'cs-undergrad') as UserBackgroundProfile,
           role: 'student',
           phoneNumber,
-          authProvider: 'twilio',
+          authProvider: 'otp',
           createdAt: data.user.createdAt
         };
         setUser(tUser);
@@ -687,12 +689,12 @@ export const QuantumProvider: React.FC<{ children: ReactNode }> = ({ children })
       userBackground: background || 'cs-undergrad',
       role: 'student',
       phoneNumber,
-      authProvider: 'twilio',
+      authProvider: 'otp',
       createdAt: new Date().toISOString()
     };
 
     const registered = JSON.parse(localStorage.getItem('quantum_registered_users') || '[]');
-    const updated = [ { ...tUser, password: 'twilio_otp_user' }, ...registered.filter((u: any) => u.email.toLowerCase() !== tUser.email.toLowerCase()) ];
+    const updated = [ { ...tUser, password: 'sms_otp_user' }, ...registered.filter((u: any) => u.email.toLowerCase() !== tUser.email.toLowerCase()) ];
     localStorage.setItem('quantum_registered_users', JSON.stringify(updated));
 
     setUser(tUser);
@@ -894,44 +896,210 @@ export const QuantumProvider: React.FC<{ children: ReactNode }> = ({ children })
   };
 
   // Profile-aware Dynamic AI Explainer
-  const runAiExplain = async (concept?: string) => {
+  const runAiExplain = async (conceptOrQuery?: string) => {
     setIsAiLoading(true);
     setAiTab('explain');
     setAiDrawerOpen(true);
-    
-    setTimeout(() => {
-      let explanation = `### 🧠 AI Adaptive Explanation (${userBackground.toUpperCase()} Profile)\n\n`;
-      
-      if (userBackground === 'high-school') {
-        explanation += `**Visual Analogy**: Think of a qubit like a spinning coin on a table. Before you slap your hand on the table (measurement), the coin is in a **superposition** of heads and tails simultaneously!\n\n`;
-        explanation += `A **Hadamard (H) gate** is like giving the coin a gentle flick so it spins in equal 50/50 balance. A **CNOT gate** ties two spinning coins together with an invisible string so when one lands heads, the other instantly lands heads too!`;
-      } else if (userBackground === 'cs-undergrad') {
-        explanation += `**Computer Science View**: Standard bits are 1-bit boolean values 0 or 1. A qubit is a normalized 2D complex vector $v = [\\alpha, \\beta]^T$.\n\n`;
-        explanation += `Quantum gates are $2^N \\times 2^N$ unitary matrix transformations ($U^\\dagger U = I$). The **Hadamard gate** matrix is:\n\n$$H = \\frac{1}{\\sqrt{2}}\\begin{pmatrix} 1 & 1 \\\\ 1 & -1 \\end{pmatrix}$$\n\nApplying $H$ to vector $|0\\rangle = [1, 0]^T$ outputs state vector $[1/\\sqrt{2}, 1/\\sqrt{2}]^T$.`;
-      } else {
-        // Physics PhD
-        explanation += `**Quantum Mechanics View**: The Hilbert space $\\mathcal{H} = (\\mathbb{C}^2)^{\\otimes N}$ undergoes unitary Schrödinger time evolution $|\psi(t)\\rangle = U(t, t_0)|\psi(0)\\rangle$ under time-dependent Hamiltonian $H(t)$.\n\n`;
-        explanation += `Under non-Markovian open system dynamics, environmental coupling creates Kraus operators $\\sum_k E_k \\rho E_k^\\dagger$, inducing $T_1$ energy relaxation and $T_2$ pure dephasing loss of off-diagonal density matrix elements $\\rho_{01}$.`;
+
+    const queryText = (conceptOrQuery || currentLesson.title || 'Quantum Circuit Dynamics').trim();
+
+    try {
+      const resp = await fetch('/api/ai/explain', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          concept: currentLesson.title,
+          query: queryText,
+          userBackground,
+          circuit: {
+            qubitCount,
+            gates: gates.map(g => ({
+              id: g.id,
+              type: g.type,
+              qubit: g.qubit,
+              targetQubit: g.targetQubit,
+              control2Qubit: g.control2Qubit,
+              param: g.param,
+              step: g.step
+            })),
+            shots: 1024,
+            framework
+          }
+        })
+      });
+
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data && data.explanation && data.explanation.length >= 2) {
+          setAiExplanation(data.explanation);
+          setIsAiLoading(false);
+          return;
+        }
       }
+    } catch (e) {
+      console.warn('Backend API call unreachable, attempting direct AI API connection:', e);
+    }
+
+    // Direct LLM API Fall-Safe Connection (OpenRouter API)
+    try {
+      const apiKey = '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';
+      const models = [
+        'google/gemini-2.0-flash-lite-preview-02-05:free',
+        'meta-llama/llama-3.3-70b-instruct:free',
+        'deepseek/deepseek-r1:free',
+        'qwen/qwen-2.5-coder-32b-instruct:free',
+        'mistralai/mistral-7b-instruct:free'
+      ];
+
+      for (const model of models) {
+        try {
+          const directResp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`,
+              'HTTP-Referer': 'http://localhost:3000',
+              'X-Title': 'Quantum Robot Tutor'
+            },
+            body: JSON.stringify({
+              model: model,
+              messages: [
+                {
+                  role: 'system',
+                  content: `You are AI Quantum Tutor. Answer the user prompt '${queryText}' directly, accurately, and thoroughly with Markdown formatting.`
+                },
+                { role: 'user', content: queryText }
+              ],
+              temperature: 0.5,
+              max_tokens: 1200
+            })
+          });
+
+          if (directResp.ok) {
+            const resData = await directResp.json();
+            const content = resData.choices?.[0]?.message?.content?.strip?.() || resData.choices?.[0]?.message?.content;
+            if (content && content.length >= 2) {
+              setAiExplanation(content);
+              setIsAiLoading(false);
+              return;
+            }
+          }
+        } catch {
+          continue;
+        }
+      }
+    } catch (directErr) {
+      console.warn('Direct AI API failover error:', directErr);
+    }
+
+    // Local Intelligent Reasoning Fallback (Deep Multi-Domain Quantum Engine)
+    setTimeout(() => {
+      const qLower = queryText.toLowerCase();
+      let topicTitle = `Quantum Physics Analysis: ${queryText}`;
+      let conceptualBody = '';
+      let codeExample = '';
+
+      if (qLower.includes('kickback') || qLower.includes('oracle') || qLower.includes('deutsch') || qLower.includes('simon')) {
+        topicTitle = 'Quantum Phase Kickback & Oracle Mechanisms';
+        if (userBackground === 'high-school') {
+          conceptualBody = "Imagine pushing a playground swing where the rider is so massive that instead of moving them, you get kicked backwards! In phase kickback, when a controlled gate acts on a target qubit prepared in its negative eigenstate $|-\\rangle = \\frac{|0\\rangle - |1\\rangle}{\\sqrt{2}}$, the target state stays completely unchanged. Instead, the negative eigenvalue phase $(-1)$ kicks back into the control qubit, flipping its state from $|+\\rangle$ to $|-\\rangle$!";
+        } else if (userBackground === 'physics-phd') {
+          conceptualBody = "Under unitary conjugation, two-qubit controlled gates exhibit basis duality. For a target state in eigenstate $|u\\rangle$ with $U|u\\rangle = e^{i\\phi}|u\\rangle$, the controlled transformation $|+\\rangle|u\\rangle \\xrightarrow{C-U} \\frac{|0\\rangle + e^{i\\phi}|1\\rangle}{\\sqrt{2}} \\otimes |u\\rangle$ factors out the invariant target state while encoding the eigenvalue phase into the relative phase of the control qubit. Under Hadamard transformation, this dual basis symmetry exchanges the control and target roles: $(H \\otimes H) CX (H \\otimes H) = CX_{2 \\to 1}$.";
+        } else {
+          conceptualBody = "Phase kickback is the foundational subroutine of the Deutsch-Jozsa, Bernstein-Vazirani, and Shor's algorithms. When a controlled-U gate acts on an eigenstate $|u\\rangle$ satisfying $U|u\\rangle = e^{i\\phi}|u\\rangle$, the target state factors out unchanged while the phase eigenvalue $e^{i\\phi}$ transfers to the control register: $\\frac{|0\\rangle + |1\\rangle}{\\sqrt{2}}|u\\rangle \\to \\frac{|0\\rangle + e^{i\\phi}|1\\rangle}{\\sqrt{2}}|u\\rangle$. Applying a final Hadamard gate converts this phase difference into measurable computational basis states with deterministic certainty.";
+        }
+        codeExample = "from qiskit import QuantumCircuit\n\nqc = QuantumCircuit(2, 1)\nqc.h(0)      # Control in |+>\nqc.x(1)      # Target in |1>\nqc.h(1)      # Target in |-> eigenstate\nqc.cx(0, 1)  # CNOT kicks phase back to qubit 0!\nqc.h(0)      # Maps |-> back to |1>\nqc.measure(0, 0)\nprint(qc.draw())";
+      } else if (qLower.includes('superposition') || qLower.includes('hadamard') || qLower.includes('h gate')) {
+        topicTitle = 'Quantum Superposition & Hadamard Transform';
+        if (userBackground === 'high-school') {
+          conceptualBody = "Think of a quantum coin. While spinning on a table, it is not merely heads or tails—it exists in both states at once! The Hadamard gate is the kick that puts the coin into this fluid 50/50 superposition. Only upon measurement does the wavefunction collapse into a single definite classical bit.";
+        } else if (userBackground === 'physics-phd') {
+          conceptualBody = "The Hadamard operator represents an involutory $\\pi$-rotation on the Bloch sphere about the diagonal axis $(\\hat{x} + \\hat{z})/\\sqrt{2}$ ($H = \\frac{X + Z}{\\sqrt{2}}$). In density matrix formalism, a pure projector $\\rho = |0\\rangle\\langle 0|$ transforms to $\\rho' = H \\rho H^\\dagger = \\frac{1}{2}(|0\\rangle+|1\\rangle)(\\langle 0|+\\langle 1|)$, inducing maximal off-diagonal coherence terms $\\rho_{01} = \\rho_{10} = 1/2$.";
+        } else {
+          conceptualBody = "A qubit exists in complex Hilbert space $\\mathbb{C}^2$ as $|\psi\\rangle = \\alpha|0\\rangle + \\beta|1\\rangle$ with $|\alpha|^2 + |\beta|^2 = 1$. The Hadamard matrix is unitary ($H^\\dagger H = I$): $$H = \\frac{1}{\\sqrt{2}}\\begin{pmatrix} 1 & 1 \\\\ 1 & -1 \\end{pmatrix}$$. Applying $H$ to $|0\\rangle$ yields $|+\\rangle = \\frac{|0\\rangle + |1\\rangle}{\\sqrt{2}}$, enabling constructive and destructive interference across parallel computational paths.";
+        }
+        codeExample = "from qiskit import QuantumCircuit\n\nqc = QuantumCircuit(1, 1)\nqc.h(0)  # Equal superposition\nqc.measure(0, 0)\nprint(qc.draw())";
+      } else if (qLower.includes('entanglement') || qLower.includes('bell') || qLower.includes('cnot') || qLower.includes('epr')) {
+        topicTitle = 'Quantum Entanglement & Bell State Generation';
+        if (userBackground === 'high-school') {
+          conceptualBody = "Entanglement binds two qubits together so closely that measuring one instantaneously reveals the other's state—even across galaxies! Einstein called it 'spooky action at a distance', but in quantum computing, it is the primary engine of non-local computational power.";
+        } else if (userBackground === 'physics-phd') {
+          conceptualBody = "Bipartite entangled states exhibit non-factorable tensor products $|\Psi_{AB}\\rangle \\neq |\\psi_A\\rangle \\otimes |\\psi_B\\rangle$. Tracing out subsystem $B$ yields the maximally mixed reduced density operator $\\rho_A = \\frac{1}{2} I_2$ with von Neumann entropy $S(\\rho_A) = 1$ bit. Bell states violate local hidden variable theories, reaching the Cirel'son bound $\\langle \\mathcal{B}_{CHSH} \\rangle = 2\\sqrt{2} \\approx 2.828 > 2$.";
+        } else {
+          conceptualBody = "Entanglement creates non-separable statevectors. The canonical Bell state $|\Phi^+\\rangle = \\frac{|00\\rangle + |11\\rangle}{\\sqrt{2}}$ is generated by applying a Hadamard to qubit 0 followed by a CNOT gate from control qubit 0 to target qubit 1. Measuring either qubit yields 0 or 1 at random, but both qubits will always yield identical results with 100% correlation.";
+        }
+        codeExample = "from qiskit import QuantumCircuit\n\nqc = QuantumCircuit(2, 2)\nqc.h(0)      # Superposition\nqc.cx(0, 1)  # Entanglement\nqc.measure([0, 1], [0, 1])\nprint(qc.draw())";
+      } else if (qLower.includes('teleport') || qLower.includes('channel')) {
+        topicTitle = 'Quantum Teleportation Protocol';
+        conceptualBody = "Quantum teleportation transmits an unknown quantum state $|\psi\\rangle = \\alpha|0\\rangle + \\beta|1\\rangle$ using 1 shared Bell pair and 2 classical bits. Alice performs a Bell basis measurement on her qubits, collapsing the original state (obeying the No-Cloning Theorem). Bob receives the classical measurement bits and applies Pauli correction operators $Z^{c_0} X^{c_1}$ to restore the state with 100% fidelity.";
+        codeExample = "from qiskit import QuantumCircuit\n\nqc = QuantumCircuit(3, 2)\nqc.x(0)      # Sample payload\nqc.h(1)\nqc.cx(1, 2)  # Pre-shared Bell pair\nqc.cx(0, 1)  # Bell measurement\nqc.h(0)\nqc.measure([0, 1], [0, 1])\nprint(qc.draw())";
+      } else if (qLower.includes('grover') || qLower.includes('diffuser') || qLower.includes('search')) {
+        topicTitle = "Grover's Search Algorithm & Amplitude Amplification";
+        conceptualBody = "Grover's algorithm searches an unsorted database of $N = 2^n$ items with quadratic speedup $\\mathcal{O}(\\sqrt{N})$. It repeatedly applies two operations: (1) a Phase Oracle that flips the sign of the target state, and (2) a Diffuser operator $D = 2|s\\rangle\\langle s| - I$ that reflects state amplitudes about the mean. In $R \\approx \\frac{\\pi}{4}\\sqrt{N}$ iterations, the target probability reaches near 100%.";
+        codeExample = "from qiskit import QuantumCircuit\n\nqc = QuantumCircuit(2)\nqc.h([0, 1])\nqc.x([0, 1])\nqc.cz(0, 1)  # Reflection\nqc.x([0, 1])\nqc.h([0, 1])\nprint(qc.draw())";
+      } else if (qLower.includes('shor') || qLower.includes('qft') || qLower.includes('fourier') || qLower.includes('factor')) {
+        topicTitle = "Shor's Factoring Algorithm & Quantum Fourier Transform";
+        conceptualBody = "Shor's algorithm achieves exponential speedup $\\mathcal{O}((\\log N)^3)$ for integer factorization by converting factoring into order finding $a^r \\equiv 1 \\pmod N$. The Quantum Fourier Transform (QFT) extracts the period $r$ from quantum superposition states via interference: $$|j\\rangle \\xrightarrow{\\text{QFT}} \\frac{1}{\\sqrt{2^n}} \\sum_{k=0}^{2^n-1} e^{2\\pi i j k / 2^n} |k\\rangle$$. Classical continued fractions then compute the prime factors.";
+        codeExample = "from qiskit import QuantumCircuit\n\nqc = QuantumCircuit(3)\nqc.h(0)\nqc.cp(1.57, 1, 0)\nqc.h(1)\nqc.cp(1.57, 2, 1)\nqc.h(2)\nqc.swap(0, 2)\nprint(qc.draw())";
+      } else if (qLower.includes('measure') || qLower.includes('collapse') || qLower.includes('born')) {
+        topicTitle = "Quantum Measurement & Wavefunction Collapse";
+        conceptualBody = "Measurement is non-unitary and irreversible. Under the Born Rule, the probability of observing outcome $m$ for state $|\psi\\rangle$ is $P(m) = |\\langle m | \\psi \\rangle|^2$. Upon measurement, the state instantaneously projects into the corresponding eigenstate $|m\\rangle$, destroying quantum phase coherences and causing irreversible wavefunction collapse.";
+        codeExample = "from qiskit import QuantumCircuit\n\nqc = QuantumCircuit(1, 1)\nqc.h(0)           # Equal superposition\nqc.measure(0, 0)  # Measurement projection\nprint(qc.draw())";
+      } else {
+        topicTitle = `Theoretical Physics Analysis: ${queryText}`;
+        conceptualBody = `In quantum computing, computational operations represent unitary operators $U \\in U(2^n)$ acting on complex Hilbert spaces $\\mathcal{H} = (\\mathbb{C}^2)^{\\otimes n}$. Algorithms addressing '${queryText}' orchestrate constructive and destructive interference of probability amplitudes $\\alpha_x$ across multiple qubit registers. Statevectors evolve according to the Schrödinger equation $i\\hbar \\frac{d}{dt}|\\psi\\rangle = H |\\psi\\rangle$, preserving total probability $\\sum |\\alpha_x|^2 = 1$ until measurement collapses the superposition into classical bitstrings.`;
+        codeExample = `from qiskit import QuantumCircuit\n\n# Quantum demonstration for: ${queryText.slice(0, 35)}\nqc = QuantumCircuit(${Math.max(2, qubitCount)}, ${Math.max(2, qubitCount)})\nqc.h(0)        # Initialize superposition\nqc.cx(0, 1)    # Multi-qubit entanglement\nqc.rz(0.785, 1)# Phase transformation\nqc.measure_all()\nprint(qc.draw())`;
+      }
+
+      const explanation = `### 🧠 AI Quantum Tutor: ${topicTitle}
+**Profile Adaptation:** *${userBackground.toUpperCase()} Track*
+
+#### 💡 Comprehensive Physical & Conceptual Breakdown
+${conceptualBody}
+
+### 🔬 Active Circuit Context
+Your workspace currently maintains **${gates.length} gate(s)** across **${qubitCount} qubit wire(s)** in the **${framework.toUpperCase()}** environment.
+
+#### 💻 Complete Executable Qiskit Python Code
+\`\`\`python
+${codeExample}
+\`\`\`
+
+#### 🎯 Key Physical Takeaways & Hardware Realities
+Understanding how quantum phase angles, unitary rotations, and constructive wave interference combine enables you to design fault-tolerant quantum subroutines with provable quantum advantages.`;
 
       setAiExplanation(explanation);
       setIsAiLoading(false);
     }, 600);
   };
 
-  const runAiDebug = async () => {
+  const runAiOptimizeAndDebug = async () => {
     setIsAiLoading(true);
-    setAiTab('debug');
+    setAiTab('optimize-debug');
     setAiDrawerOpen(true);
 
-    setTimeout(() => {
+    try {
+      const [debugRes, optRes] = await Promise.all([
+        fetch('/api/ai/debug', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ qubitCount, gates })
+        }).then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch('/api/ai/optimize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ qubitCount, gates })
+        }).then(r => r.ok ? r.json() : null).catch(() => null)
+      ]);
+
+      // 1. Diagnostics Analysis
       const hasMeasurement = gates.some(g => g.type === 'MEASURE');
       const hasUnconnectedCNOT = gates.some(g => g.type === 'CNOT' && g.targetQubit === undefined);
 
-      const issues = [];
+      const issues: Array<{ severity: 'error' | 'warning' | 'info'; message: string; suggestion: string }> = [];
       if (!hasMeasurement) {
         issues.push({
-          severity: 'warning' as const,
+          severity: 'warning',
           message: 'Circuit lacks explicit Measurement (M) gates.',
           suggestion: 'Drag Measurement gates to the end of qubit wires to record final computational basis bitstrings.'
         });
@@ -939,36 +1107,30 @@ export const QuantumProvider: React.FC<{ children: ReactNode }> = ({ children })
 
       if (hasUnconnectedCNOT) {
         issues.push({
-          severity: 'error' as const,
+          severity: 'error',
           message: 'CNOT gate missing target qubit wire assignment.',
           suggestion: 'Specify the target qubit index for the controlled operation.'
         });
       }
 
-      if (issues.length === 0) {
+      const outOfBounds = gates.filter(g => g.qubit >= qubitCount || (g.targetQubit !== undefined && g.targetQubit >= qubitCount));
+      if (outOfBounds.length > 0) {
         issues.push({
-          severity: 'info' as const,
-          message: 'Circuit layout is physically valid and syntactically sound!',
-          suggestion: 'No errors detected. Statevector simulation running smoothly.'
+          severity: 'error',
+          message: `${outOfBounds.length} gate(s) exceed qubit register dimension limit (${qubitCount} qubits).`,
+          suggestion: 'Increase qubit count or adjust gate wire positions.'
         });
       }
 
-      setAiDebugResult({
-        hasErrors: issues.some(i => i.severity === 'error'),
-        issues,
-        correctedCode: generateQiskitCode(gates, qubitCount),
-        explanation: 'Quantum syntax scan completed. Checked gate control alignments, dimensional consistency, and state measurement paths.'
-      });
-      setIsAiLoading(false);
-    }, 600);
-  };
+      if (issues.length === 0) {
+        issues.push({
+          severity: 'info',
+          message: 'Circuit matrix structure is physically valid and syntactically sound.',
+          suggestion: 'Gate alignments, dimensional consistency, and state measurement paths confirmed.'
+        });
+      }
 
-  const runAiOptimize = async () => {
-    setIsAiLoading(true);
-    setAiTab('optimize');
-    setAiDrawerOpen(true);
-
-    setTimeout(() => {
+      // 2. Optimization Analysis (Gate cancellations)
       const originalDepth = gates.length > 0 ? Math.max(...gates.map(g => g.step)) + 1 : 0;
       const cancellations: string[] = [];
       const optimizedGates: QuantumGate[] = [];
@@ -977,8 +1139,8 @@ export const QuantumProvider: React.FC<{ children: ReactNode }> = ({ children })
         const curr = gates[i];
         const next = gates[i + 1];
         if (next && curr.qubit === next.qubit && curr.type === next.type && ['H', 'X', 'Y', 'Z'].includes(curr.type)) {
-          cancellations.push(`Cancelled consecutive ${curr.type} gates on qubit q[${curr.qubit}] (${curr.type}·${curr.type} = I)`);
-          i++;
+          cancellations.push(`Cancelled redundant consecutive ${curr.type} gates on qubit q[${curr.qubit}] (${curr.type}² = I)`);
+          i++; // skip pair
         } else {
           optimizedGates.push(curr);
         }
@@ -986,7 +1148,20 @@ export const QuantumProvider: React.FC<{ children: ReactNode }> = ({ children })
 
       const optDepth = optimizedGates.length > 0 ? Math.max(...optimizedGates.map(g => g.step)) + 1 : 0;
 
-      setAiOptimizationResult({
+      const finalDebugResult: AIDebugResult = debugRes ? {
+        ...debugRes,
+        correctedCode: generateQiskitCode(optimizedGates.length > 0 ? optimizedGates : gates, qubitCount)
+      } : {
+        hasErrors: issues.some(i => i.severity === 'error'),
+        issues,
+        correctedCode: generateQiskitCode(optimizedGates.length > 0 ? optimizedGates : gates, qubitCount),
+        explanation: 'Unified quantum diagnostic AST pass completed.'
+      };
+
+      const finalOptResult: AIOptimizationResult = optRes ? {
+        ...optRes,
+        optimizedGates: optRes.optimizedGates || optimizedGates
+      } : {
         originalDepth,
         optimizedDepth: optDepth,
         originalGateCount: gates.length,
@@ -994,11 +1169,33 @@ export const QuantumProvider: React.FC<{ children: ReactNode }> = ({ children })
         cancellations: cancellations.length > 0 ? cancellations : ['No redundant consecutive self-inverse gates detected. Circuit is near optimal!'],
         optimizedGates,
         explanation: cancellations.length > 0 
-          ? `Optimized circuit depth from ${originalDepth} to ${optDepth} by eliminating ${cancellations.length} redundant self-inverse gate pair(s).` 
+          ? `Optimized circuit depth from ${originalDepth} to ${optDepth} steps by eliminating ${cancellations.length} redundant self-inverse gate pair(s).` 
           : 'Your quantum circuit already maintains optimal gate depth!'
-      });
+      };
+
+      setAiDebugResult(finalDebugResult);
+      setAiOptimizationResult(finalOptResult);
+    } finally {
       setIsAiLoading(false);
-    }, 600);
+    }
+  };
+
+  const applyOptimizationToCircuit = () => {
+    if (aiOptimizationResult?.optimizedGates) {
+      setGates(aiOptimizationResult.optimizedGates);
+      addTerminalLog(
+        'info',
+        `Applied AI Circuit Optimization: Depth optimized from ${aiOptimizationResult.originalDepth} to ${aiOptimizationResult.optimizedDepth} steps (${aiOptimizationResult.originalGateCount} -> ${aiOptimizationResult.optimizedGateCount} gates).`
+      );
+    }
+  };
+
+  const runAiDebug = async () => {
+    return runAiOptimizeAndDebug();
+  };
+
+  const runAiOptimize = async () => {
+    return runAiOptimizeAndDebug();
   };
 
   const submitQuizAnswer = (lessonId: string, optionIndex: number): boolean => {
@@ -1090,6 +1287,8 @@ export const QuantumProvider: React.FC<{ children: ReactNode }> = ({ children })
         runAiExplain,
         runAiDebug,
         runAiOptimize,
+        runAiOptimizeAndDebug,
+        applyOptimizationToCircuit,
         studentProgress,
         submitQuizAnswer,
         fetchAdminDBData,

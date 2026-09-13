@@ -1,5 +1,5 @@
 export interface AIAgent {
-  id: 'dr_vector' | 'agent_hilbert' | 'agent_spectrum' | 'agent_socratic';
+  id: string;
   name: string;
   role: string;
   specialty: string;
@@ -24,40 +24,13 @@ export interface TheoryTopic {
 
 export const AI_TEACHING_AGENTS: AIAgent[] = [
   {
-    id: 'dr_vector',
-    name: 'Dr. Q. Vector',
-    role: 'Theory & Intuition Agent',
-    specialty: 'Physical intuition, wave-particle duality, state superposition & conceptual physics',
+    id: 'training_agent',
+    name: 'Training Agent',
+    role: 'Stark Sensei',
+    specialty: 'Dirac bra-ket algebra, physical intuition, mathematical proofs & circuit dynamics',
     avatarBg: 'bg-blue-600',
     avatarColor: 'text-blue-400',
-    greeting: 'Welcome! I am Dr. Q. Vector. I translate abstract quantum physics into intuitive physical pictures and geometric metaphors.'
-  },
-  {
-    id: 'agent_hilbert',
-    name: 'Agent Hilbert',
-    role: 'Math Proof & Formalism Agent',
-    specialty: 'Dirac bra-ket algebra, inner products ⟨ψ|φ⟩, matrix operations & unitary proofs',
-    avatarBg: 'bg-indigo-600',
-    avatarColor: 'text-indigo-400',
-    greeting: 'Greetings. I am Agent Hilbert. I specialize in rigorous mathematical proofs, Hilbert space linear algebra, and Dirac tensor notation.'
-  },
-  {
-    id: 'agent_spectrum',
-    name: 'Agent Spectrum',
-    role: 'Abstract Geometry Visualizer Agent',
-    specialty: 'Argand complex plane, Bloch vector coordinates (θ, φ), probability distributions & phase clocks',
-    avatarBg: 'bg-purple-600',
-    avatarColor: 'text-purple-400',
-    greeting: 'Hello! I am Agent Spectrum. I generate real-time 2D Argand complex amplitude plots, phase clocks, and geometric projections.'
-  },
-  {
-    id: 'agent_socratic',
-    name: 'Agent Socratic',
-    role: 'Socratic Quiz & Evaluation Agent',
-    specialty: 'Interactive guided questioning, step-by-step problem evaluation & Socratic dialogue',
-    avatarBg: 'bg-emerald-600',
-    avatarColor: 'text-emerald-400',
-    greeting: 'Welcome, scholar! I am Agent Socratic. I guide your learning through targeted questions, hints, and interactive evaluation.'
+    greeting: 'Hello! I am Stark Sensei. Ask me any question about quantum mechanics, linear algebra, circuit design, or algorithms, and I will generate a complete answer for you!'
   }
 ];
 

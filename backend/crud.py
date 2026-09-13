@@ -2,7 +2,12 @@ import uuid
 import hashlib
 import datetime
 from sqlalchemy.orm import Session
-from backend.models import User, QuantumCircuitModel, StudentProgressModel, BadgeModel, CohortAttemptModel, ModuleTestResultModel
+
+try:
+    from backend.models import User, QuantumCircuitModel, StudentProgressModel, BadgeModel, CohortAttemptModel, ModuleTestResultModel
+except ModuleNotFoundError:
+    from models import User, QuantumCircuitModel, StudentProgressModel, BadgeModel, CohortAttemptModel, ModuleTestResultModel
+
 
 def _hash_pass(password: str) -> str:
     return hashlib.sha256(password.encode('utf-8')).hexdigest()
@@ -45,7 +50,7 @@ def create_user_by_phone(db: Session, phone_number: str, full_name: str = "Quant
     return create_user_account(
         db=db,
         email=pseudo_email,
-        password="twilio_otp_authenticated",
+        password="sms_otp_authenticated",
         full_name=f"{full_name} ({clean_phone})",
         background=user_background,
         role="student"

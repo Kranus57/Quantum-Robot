@@ -22,7 +22,8 @@ export const AdminDBExplorerModal: React.FC = () => {
   const { fetchAdminDBData, deleteUserFromDB, setActiveView, user } = useQuantum();
 
   const [dbData, setDbData] = useState<DBTableSummary | null>(null);
-  const [activeTable, setActiveTable] = useState<'users' | 'quantum_circuits' | 'student_progress' | 'badges' | 'cohort_attempts'>('users');
+  const [dbHealth, setDbHealth] = useState<any | null>(null);
+  const [activeTable, setActiveTable] = useState<'users' | 'quantum_circuits' | 'student_progress' | 'badges' | 'cohort_attempts' | 'module_test_results'>('users');
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -35,6 +36,16 @@ export const AdminDBExplorerModal: React.FC = () => {
       setDbData(data);
     } else {
       setMsg('Failed to connect to backend database endpoint.');
+    }
+
+    try {
+      const healthRes = await fetch('/api/db/health');
+      if (healthRes.ok) {
+        const hData = await healthRes.json();
+        setDbHealth(hData);
+      }
+    } catch (e) {
+      console.warn('Could not fetch DB health status:', e);
     }
     setIsLoading(false);
   };
@@ -56,8 +67,8 @@ export const AdminDBExplorerModal: React.FC = () => {
   };
 
   const getFilteredRows = () => {
-    if (!dbData || !dbData.tables[activeTable]) return [];
-    const rows = dbData.tables[activeTable] as any[];
+    if (!dbData || !dbData.tables[activeTable as keyof typeof dbData.tables]) return [];
+    const rows = (dbData.tables[activeTable as keyof typeof dbData.tables] || []) as any[];
     if (!searchQuery.trim()) return rows;
 
     const q = searchQuery.toLowerCase();
@@ -79,10 +90,10 @@ export const AdminDBExplorerModal: React.FC = () => {
           </div>
           <h1 className="text-2xl font-extrabold text-white tracking-tight flex items-center space-x-2">
             <Database className="w-6 h-6 text-indigo-300" />
-            <span>SQL Database Explorer & Record Inspector</span>
+            <span>SQL & Document DB Explorer & Record Inspector</span>
           </h1>
           <p className="text-xs text-blue-100 mt-1 max-w-2xl">
-            Real-time inspection of backend SQLite / PostgreSQL database tables, user authentication records, quantum circuit QASM state vectors, and student module logs.
+            Real-time inspection of backend SQLite / PostgreSQL database tables, user authentication records, quantum circuit QASM state vectors, and AI-graded module tests.
           </p>
         </div>
 
@@ -114,41 +125,50 @@ export const AdminDBExplorerModal: React.FC = () => {
       )}
 
       {/* Stats KPI Metric Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
         <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm space-y-1">
           <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-semibold">Registered Users</span>
+            <span className="text-xs font-semibold">Users</span>
             <Users className="w-4 h-4 text-blue-600" />
           </div>
           <div className="text-2xl font-extrabold text-slate-900">{dbData?.stats.total_users ?? '-'}</div>
-          <div className="text-[10px] text-slate-500 font-mono">Students & Admins</div>
+          <div className="text-[10px] text-slate-500 font-mono">Accounts</div>
         </div>
 
         <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm space-y-1">
           <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-semibold">Circuits Saved</span>
+            <span className="text-xs font-semibold">Circuits</span>
             <Cpu className="w-4 h-4 text-indigo-600" />
           </div>
           <div className="text-2xl font-extrabold text-slate-900">{dbData?.stats.total_circuits ?? '-'}</div>
-          <div className="text-[10px] text-slate-500 font-mono">QASM Circuit Records</div>
+          <div className="text-[10px] text-slate-500 font-mono">Saved QASM</div>
         </div>
 
         <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm space-y-1">
           <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-semibold">Progress Logs</span>
+            <span className="text-xs font-semibold">Progress</span>
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
           </div>
           <div className="text-2xl font-extrabold text-slate-900">{dbData?.stats.total_progress_records ?? '-'}</div>
-          <div className="text-[10px] text-slate-500 font-mono">Lesson Completions</div>
+          <div className="text-[10px] text-slate-500 font-mono">Lessons Completed</div>
         </div>
 
         <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm space-y-1">
           <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-semibold">Unlocked Badges</span>
+            <span className="text-xs font-semibold">Badges</span>
             <Award className="w-4 h-4 text-amber-600" />
           </div>
           <div className="text-2xl font-extrabold text-slate-900">{dbData?.stats.total_badges ?? '-'}</div>
-          <div className="text-[10px] text-slate-500 font-mono">Achievement Badges</div>
+          <div className="text-[10px] text-slate-500 font-mono">Achievements</div>
+        </div>
+
+        <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm space-y-1">
+          <div className="flex items-center justify-between text-slate-500">
+            <span className="text-xs font-semibold">AI Module Tests</span>
+            <FileSpreadsheet className="w-4 h-4 text-purple-600" />
+          </div>
+          <div className="text-2xl font-extrabold text-slate-900">{dbData?.stats.total_module_tests ?? dbData?.tables.module_test_results?.length ?? 0}</div>
+          <div className="text-[10px] text-slate-500 font-mono">Test Evaluations</div>
         </div>
 
         <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm space-y-1">
@@ -158,7 +178,7 @@ export const AdminDBExplorerModal: React.FC = () => {
           </div>
           <div className="text-xs font-bold text-emerald-600 font-mono mt-1 flex items-center space-x-1">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>ACTIVE</span>
+            <span>{dbHealth?.status === 'healthy' ? 'HEALTHY' : 'ACTIVE'}</span>
           </div>
           <div className="text-[10px] text-slate-500 font-mono truncate">{dbData?.stats.db_engine || 'SQLAlchemy Engine'}</div>
         </div>
@@ -169,7 +189,7 @@ export const AdminDBExplorerModal: React.FC = () => {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-200 pb-3">
           {/* Table Switcher */}
           <div className="flex flex-wrap gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200">
-            {(['users', 'student_progress', 'badges', 'quantum_circuits', 'cohort_attempts'] as const).map((tab) => (
+            {(['users', 'student_progress', 'badges', 'quantum_circuits', 'cohort_attempts', 'module_test_results'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTable(tab)}
@@ -179,7 +199,7 @@ export const AdminDBExplorerModal: React.FC = () => {
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                 }`}
               >
-                {tab.replace('_', ' ').toUpperCase()} ({dbData?.tables[tab]?.length || 0})
+                {tab.replace(/_/g, ' ').toUpperCase()} ({dbData?.tables[tab as keyof typeof dbData.tables]?.length || 0})
               </button>
             ))}
           </div>
@@ -191,7 +211,7 @@ export const AdminDBExplorerModal: React.FC = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={`Search ${activeTable.replace('_', ' ')}...`}
+              placeholder={`Search ${activeTable.replace(/_/g, ' ')}...`}
               className="w-full pl-9 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 font-mono shadow-sm"
             />
           </div>
@@ -256,13 +276,27 @@ export const AdminDBExplorerModal: React.FC = () => {
                     <th className="p-3">Timestamp</th>
                   </>
                 )}
+
+                {activeTable === 'module_test_results' && (
+                  <>
+                    <th className="p-3">ID</th>
+                    <th className="p-3">Student</th>
+                    <th className="p-3">Module</th>
+                    <th className="p-3">MCQ</th>
+                    <th className="p-3">Circuit</th>
+                    <th className="p-3">Code</th>
+                    <th className="p-3">Total</th>
+                    <th className="p-3">Status</th>
+                    <th className="p-3">Submitted At</th>
+                  </>
+                )}
               </tr>
             </thead>
 
             <tbody className="divide-y divide-slate-200 font-mono text-slate-800 bg-white">
               {getFilteredRows().length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-slate-500 font-medium">
+                  <td colSpan={9} className="p-8 text-center text-slate-500 font-medium">
                     No matching database records found for "{activeTable}".
                   </td>
                 </tr>
@@ -346,6 +380,26 @@ export const AdminDBExplorerModal: React.FC = () => {
                         <td className="p-3 text-slate-500 text-[11px]">{row.timestamp}</td>
                       </>
                     )}
+
+                    {activeTable === 'module_test_results' && (
+                      <>
+                        <td className="p-3 text-slate-500">#{row.id}</td>
+                        <td className="p-3 font-bold text-slate-900">{row.student_name}</td>
+                        <td className="p-3 text-indigo-700 font-bold">{row.module_title}</td>
+                        <td className="p-3 text-slate-700">{row.mcq_score} pts</td>
+                        <td className="p-3 text-slate-700">{row.circuit_score} pts</td>
+                        <td className="p-3 text-slate-700">{row.code_score} pts</td>
+                        <td className="p-3 font-extrabold text-blue-700">{row.percentage}% ({row.total_score} pts)</td>
+                        <td className="p-3">
+                          <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold border ${
+                            row.status === 'passed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'
+                          }`}>
+                            {row.status}
+                          </span>
+                        </td>
+                        <td className="p-3 text-slate-500 text-[11px]">{row.submitted_at}</td>
+                      </>
+                    )}
                   </tr>
                 ))
               )}
@@ -356,3 +410,4 @@ export const AdminDBExplorerModal: React.FC = () => {
     </div>
   );
 };
+

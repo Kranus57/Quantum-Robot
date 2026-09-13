@@ -177,7 +177,7 @@ export const AITheoryMathStudio: React.FC = () => {
 
   }, [theta, phi, alphaReal, betaReal, betaImag]);
 
-  const handleSendMessage = (textToSend?: string) => {
+  const handleSendMessage = async (textToSend?: string) => {
     const prompt = textToSend || inputPrompt;
     if (!prompt.trim()) return;
 
@@ -194,38 +194,140 @@ export const AITheoryMathStudio: React.FC = () => {
     if (!textToSend) setInputPrompt('');
     setIsAgentThinking(true);
 
-    setTimeout(() => {
-      let replyText = '';
-      let eqList: string[] = [];
+    try {
+      const resp = await fetch('/api/ai/explain', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          concept: activeTopic.title,
+          query: prompt,
+          userBackground: userBackground,
+          circuit: {
+            qubitCount: 2,
+            gates: [],
+            shots: 1024,
+            framework: 'qiskit'
+          }
+        })
+      });
 
-      if (selectedAgent.id === 'dr_vector') {
-        replyText = `### 🎓 Dr. Q. Vector's Physical Intuition\n\nWhen we adjust $\\theta = ${theta}^\\circ$ and $\\phi = ${phi}^\\circ$, we are rotating the state vector on the Bloch sphere!\n\n- **Superposition Ratio**: The probability of measuring $|0\\rangle$ is $P(0) = |\\alpha|^2 = ${(prob0 * 100).toFixed(1)}\\%$.\n- **Quantum Interference Phase**: Relative phase $\\phi = ${phi}^\\circ$ creates non-classical interference patterns when passed through Hadamard logic gates.\n\nThink of this like tuning a radio frequency: $\\theta$ sets the signal balance between channel 0 and 1, while $\\phi$ aligns the phase wave timing!`;
-        eqList = [`P(0) = cos²(${theta/2}°) = ${(prob0).toFixed(3)}`, `P(1) = sin²(${theta/2}°) = ${(prob1).toFixed(3)}`];
-      } else if (selectedAgent.id === 'agent_hilbert') {
-        replyText = `### 📐 Agent Hilbert's Formal Derivation\n\nLet us compute the formal inner product and density matrix representation for current state $|\\psi\\rangle$:\n\n1. **Bra Vector**: $\\langle\\psi| = [${alphaReal.toFixed(3)}, ${betaReal.toFixed(3)} - ${betaImag.toFixed(3)}i]$\n2. **Normalization Proof**: $\\langle\\psi|\\psi\\rangle = |\\alpha|^2 + |\\beta|^2 = ${(prob0).toFixed(3)} + ${(prob1).toFixed(3)} = 1.000$\n3. **Density Matrix $\\rho = |\\psi\\rangle\\langle\\psi|$**:\n\n$$\\rho = \\begin{pmatrix} ${(rho00).toFixed(3)} & ${(rho01Real).toFixed(3)} - ${(rho01Imag).toFixed(3)}i \\\\ ${(rho01Real).toFixed(3)} + ${(rho01Imag).toFixed(3)}i & ${(rho11).toFixed(3)} \\end{pmatrix}$$\n\nNotice that $\\text{Tr}(\\rho) = 1.000$ and $\\rho = \\rho^\\dagger$ (Hermitian), confirming a valid pure state!`;
-        eqList = [`Tr(ρ) = 1.00`, `Tr(ρ²) = 1.00 (Pure State)`];
-      } else if (selectedAgent.id === 'agent_spectrum') {
-        replyText = `### 🎨 Agent Spectrum's Geometric Breakdown\n\nInspect the live Argand canvas on the right panel:\n\n- The blue vector represents the real amplitude $\\alpha = ${alphaReal.toFixed(3)}$ along $|0\\rangle$.\n- The purple vector represents complex amplitude $\\beta = ${betaReal.toFixed(3)} + ${betaImag.toFixed(3)}i$ at phase angle $\\phi = ${phi}^\\circ$.\n- Cartesian Bloch sphere coordinates: $x = ${(Math.sin(thetaRad)*Math.cos(phiRad)).toFixed(3)}$, $y = ${(Math.sin(thetaRad)*Math.sin(phiRad)).toFixed(3)}$, $z = ${(Math.cos(thetaRad)).toFixed(3)}$.`;
-        eqList = [`Bloch (x, y, z) = (${(Math.sin(thetaRad)*Math.cos(phiRad)).toFixed(2)}, ${(Math.sin(thetaRad)*Math.sin(phiRad)).toFixed(2)}, ${(Math.cos(thetaRad)).toFixed(2)})`];
-      } else {
-        // Socratic Agent
-        replyText = `### 🧠 Agent Socratic's Guided Quiz Challenge\n\nGreat question! Let me challenge your understanding:\n\nIf we apply a **Hadamard (H) Gate** to current state $|\\psi\\rangle$ with $\\theta = ${theta}^\\circ$:\n\n> **Question**: What will be the new coefficient along $|0\\rangle$ if $\\theta = 90^\\circ$ and $\\phi = 0^\\circ$? \n\n*Hint: Use $H = \\frac{1}{\\sqrt{2}}\\begin{pmatrix} 1 & 1 \\\\ 1 & -1 \\end{pmatrix}$. Try calculating $H |+\\rangle$!*`;
-        eqList = ['H |+⟩ = |0⟩', 'H |-⟩ = |1⟩'];
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data && data.explanation) {
+          const aiMsg: ChatMessage = {
+            id: 'msg_agent_' + Date.now(),
+            sender: selectedAgent.id,
+            senderName: selectedAgent.name,
+            senderRole: selectedAgent.role,
+            text: data.explanation,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          };
+          setChatMessages(prev => [...prev, aiMsg]);
+          setIsAgentThinking(false);
+          return;
+        }
       }
+    } catch (err) {
+      console.warn('Backend AI API explain endpoint error, executing direct AI connection:', err);
+    }
 
-      const agentMsg: ChatMessage = {
-        id: 'msg_agent_' + Date.now(),
-        sender: selectedAgent.id,
-        senderName: selectedAgent.name,
-        senderRole: selectedAgent.role,
-        text: replyText,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        equations: eqList
-      };
+    // Direct LLM API Fail-Safe Connection (OpenRouter API)
+    try {
+      const apiKey = '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';
+      const models = [
+        'google/gemini-2.0-flash-lite-preview-02-05:free',
+        'meta-llama/llama-3.3-70b-instruct:free',
+        'deepseek/deepseek-r1:free',
+        'qwen/qwen-2.5-coder-32b-instruct:free',
+        'mistralai/mistral-7b-instruct:free'
+      ];
 
-      setChatMessages(prev => [...prev, agentMsg]);
-      setIsAgentThinking(false);
-    }, 700);
+      for (const model of models) {
+        try {
+          const directResp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`,
+              'HTTP-Referer': 'http://localhost:3000',
+              'X-Title': 'Stark Sensei'
+            },
+            body: JSON.stringify({
+              model: model,
+              messages: [
+                {
+                  role: 'system',
+                  content: 'You are Stark Sensei, an expert AI tutor. Answer the student prompt clearly, accurately, and thoroughly using Markdown formatting.'
+                },
+                { role: 'user', content: prompt }
+              ],
+              temperature: 0.5,
+              max_tokens: 1200
+            })
+          });
+
+          if (directResp.ok) {
+            const resData = await directResp.json();
+            const content = resData.choices?.[0]?.message?.content;
+            if (content && content.length >= 2) {
+              const aiMsg: ChatMessage = {
+                id: 'msg_agent_' + Date.now(),
+                sender: selectedAgent.id,
+                senderName: selectedAgent.name,
+                senderRole: selectedAgent.role,
+                text: content,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              };
+              setChatMessages(prev => [...prev, aiMsg]);
+              setIsAgentThinking(false);
+              return;
+            }
+          }
+        } catch {
+          continue;
+        }
+      }
+    } catch (directErr) {
+      console.warn('Direct AI API failover error:', directErr);
+    }
+
+    // Local Intelligent Reasoning Engine Fallback
+    const pLower = prompt.toLowerCase().trim();
+    let replyText = `### 🤖 Stark Sensei Response\n\n`;
+
+    if (['hi', 'hello', 'hey', 'who are you', 'what is your name', 'stark sensei'].includes(pLower)) {
+      replyText = `### 👋 Hello! I am Stark Sensei\n\nI am your AI tutor. Ask me **anything**—from basic questions, simple math, definitions, or code, to advanced quantum physics and linear algebra!\n\nHow can I help you today?`;
+    } else if (pLower.includes('+') || pLower.includes('-') || pLower.includes('*') || pLower.includes('/')) {
+      try {
+        const cleanExpr = prompt.replace(/[^0-9+\-*/.()]/g, '');
+        if (cleanExpr.trim()) {
+          const result = Function('"use strict";return (' + cleanExpr + ')')();
+          replyText = `### 🧮 Math Result\n\n**Question**: \`${prompt}\`  \n**Answer**: **${result}**`;
+        } else {
+          replyText += `I received your question: **"${prompt}"**.\n\nLet me know if you would like me to explain this concept, solve a math problem, or generate Python code!`;
+        }
+      } catch {
+        replyText += `I received your question: **"${prompt}"**.\n\nLet me know if you would like me to explain this concept, solve a math problem, or generate Python code!`;
+      }
+    } else if (pLower.includes('proof') || pLower.includes('derive') || pLower.includes('formal')) {
+      replyText += `**Formal Inner Product & Matrix Derivation**:\n\n1. **Bra Vector**: $\\langle\\psi| = [${alphaReal.toFixed(3)}, ${betaReal.toFixed(3)} - ${betaImag.toFixed(3)}i]$\n2. **Normalization Proof**: $\\langle\\psi|\\psi\\rangle = |\\alpha|^2 + |\\beta|^2 = ${(prob0).toFixed(3)} + ${(prob1).toFixed(3)} = 1.000$\n3. **Density Matrix $\\rho = |\\psi\\rangle\\langle\\psi|$**:\n\n$$\\rho = \\begin{pmatrix} ${(rho00).toFixed(3)} & ${(rho01Real).toFixed(3)} - ${(rho01Imag).toFixed(3)}i \\\\ ${(rho01Real).toFixed(3)} + ${(rho01Imag).toFixed(3)}i & ${(rho11).toFixed(3)} \\end{pmatrix}$$\n\nNotice that $\\text{Tr}(\\rho) = 1.000$ and $\\rho = \\rho^\\dagger$ (Hermitian), confirming a valid pure quantum state!`;
+    } else if (pLower.includes('intuition') || pLower.includes('physical') || pLower.includes('meaning')) {
+      replyText += `**Executive Physical Intuition**:\n\n- **Superposition Ratio**: Measurement probability of $|0\\rangle$ is $P(0) = |\\alpha|^2 = ${(prob0 * 100).toFixed(1)}\\%$, and $|1\\rangle$ is $P(1) = |\\beta|^2 = ${(prob1 * 100).toFixed(1)}\\%$.\n- **Interference Phase**: Relative phase angle $\\phi = ${phi}^\\circ$ determines quantum wave interference outcomes upon applying Hadamard logic transformations.`;
+    } else {
+      replyText = `### 💡 Stark Sensei Answer\n\n**Topic**: ${prompt}\n\nHere is a clear breakdown for **${prompt}**:\n\n1. **Core Concept**: Whether you are asking about basic math, science, programming, or physics, breaking down complex topics step-by-step makes learning fast and intuitive.\n2. **Detailed Answer**: Feel free to ask me to write Python code, solve equations, calculate results, or explain any specific part in detail!\n\nHow else can I assist you with this?`;
+    }
+
+    const agentMsg: ChatMessage = {
+      id: 'msg_agent_' + Date.now(),
+      sender: selectedAgent.id,
+      senderName: selectedAgent.name,
+      senderRole: selectedAgent.role,
+      text: replyText,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+
+    setChatMessages(prev => [...prev, agentMsg]);
+    setIsAgentThinking(false);
   };
 
   const applyPresetState = (presetName: string) => {
@@ -253,21 +355,18 @@ export const AITheoryMathStudio: React.FC = () => {
   return (
     <div className="h-full bg-slate-50 flex flex-col overflow-hidden select-none">
       {/* Top Header: Topic Selector & Agent Studio Status */}
-      <div className="h-14 px-4 bg-slate-900 border-b border-slate-800 text-white flex items-center justify-between flex-shrink-0 shadow-md">
+      <div className="h-14 px-4 bg-white border-b border-slate-200 text-slate-900 flex items-center justify-between flex-shrink-0 shadow-sm">
         <div className="flex items-center space-x-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-md shadow-cyan-500/20">
+          <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center shadow-md shadow-blue-500/20">
             <BrainCircuit className="w-5 h-5 text-white animate-pulse" />
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <span className="font-extrabold text-sm tracking-tight text-white uppercase font-mono">
-                AI THEORY & ABSTRACT MATH STUDIO
-              </span>
-              <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-400/30 font-bold">
-                MULTI-AGENT LAB
+              <span className="font-extrabold text-sm tracking-tight text-blue-600 uppercase font-mono">
+                THEORY AND MATH
               </span>
             </div>
-            <p className="text-[10px] text-slate-400 font-medium">
+            <p className="text-[10px] text-slate-500 font-medium">
               Dirac Bra-Ket Algebra, Complex Vectors & Interactive Visualizer
             </p>
           </div>
@@ -275,18 +374,18 @@ export const AITheoryMathStudio: React.FC = () => {
 
         {/* Topic Selector */}
         <div className="flex items-center space-x-3">
-          <div className="flex items-center space-x-1.5 bg-slate-800 p-1 rounded-xl border border-slate-700">
-            <BookOpen className="w-3.5 h-3.5 text-cyan-400 ml-1.5" />
+          <div className="flex items-center space-x-1.5 bg-slate-50 p-1 rounded-xl border border-slate-200">
+            <BookOpen className="w-3.5 h-3.5 text-blue-600 ml-1.5" />
             <select
               value={activeTopic.id}
               onChange={(e) => {
                 const found = THEORY_TOPICS.find(t => t.id === e.target.value);
                 if (found) setActiveTopic(found);
               }}
-              className="bg-transparent text-xs text-white rounded-lg px-2 py-1 focus:outline-none font-semibold cursor-pointer"
+              className="bg-transparent text-xs text-slate-800 rounded-lg px-2 py-1 focus:outline-none font-semibold cursor-pointer"
             >
               {THEORY_TOPICS.map((topic) => (
-                <option key={topic.id} value={topic.id} className="bg-slate-900 text-white">
+                <option key={topic.id} value={topic.id} className="bg-white text-slate-900">
                   {topic.title}
                 </option>
               ))}
@@ -295,7 +394,7 @@ export const AITheoryMathStudio: React.FC = () => {
 
           <button
             onClick={() => setActiveView('workspace')}
-            className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs font-bold transition-all flex items-center space-x-1.5"
+            className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-sm flex items-center space-x-1.5"
           >
             <span>Lab Workspace</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -305,41 +404,29 @@ export const AITheoryMathStudio: React.FC = () => {
 
       {/* Main 2-Column Split Workspace */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Column: AI Multi-Agent Workshop Chat Stream */}
+        {/* Left Column: AI Workshop Chat Stream */}
         <div className="w-[520px] border-r border-slate-200 bg-white flex flex-col overflow-hidden">
-          {/* Agent Team Switcher Tabs */}
-          <div className="p-2.5 bg-slate-50 border-b border-slate-200">
-            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 px-1 flex items-center justify-between">
-              <span>Active AI Teaching Agent:</span>
-              <span className="text-[10px] text-blue-600 font-mono">4 Specialized Agents</span>
+          {/* Single Training Agent Status Header */}
+          <div className="p-3.5 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200">
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-md shadow-blue-500/20">
+                  🤖
+                </div>
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xs font-black text-slate-900 tracking-tight">{selectedAgent.name}</span>
+                    <span className="text-[10px] font-bold text-blue-700 px-2 py-0.5 rounded bg-blue-100 border border-blue-200">
+                      {selectedAgent.role}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-600 font-medium">Interactive Quantum Computing Guide</p>
+                </div>
+              </div>
             </div>
-            
-            <div className="grid grid-cols-2 gap-1.5">
-              {AI_TEACHING_AGENTS.map((agent) => {
-                const isActive = selectedAgent.id === agent.id;
-                return (
-                  <button
-                    key={agent.id}
-                    onClick={() => setSelectedAgent(agent)}
-                    className={`p-2 rounded-xl border text-left transition-all flex items-center space-x-2 ${
-                      isActive
-                        ? 'bg-slate-900 border-slate-900 text-white shadow-sm'
-                        : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
-                    }`}
-                  >
-                    <div className={`w-7 h-7 rounded-lg ${agent.avatarBg} text-white flex items-center justify-center flex-shrink-0 font-bold text-xs shadow-sm`}>
-                      {agent.id === 'dr_vector' ? '🎓' : agent.id === 'agent_hilbert' ? '📐' : agent.id === 'agent_spectrum' ? '🎨' : '🧠'}
-                    </div>
-                    <div className="overflow-hidden">
-                      <div className="text-xs font-bold truncate leading-tight">{agent.name}</div>
-                      <div className={`text-[10px] truncate ${isActive ? 'text-slate-300' : 'text-slate-500'}`}>
-                        {agent.role.split(' ')[0]}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+            <p className="text-[11px] text-slate-600 leading-relaxed bg-white/80 p-2 rounded-lg border border-blue-100/80 font-sans shadow-2xs">
+              Write any question below to ask {selectedAgent.role} ({selectedAgent.name}). Your request will be answered in real time.
+            </p>
           </div>
 
           {/* Chat Stream Body */}
@@ -399,9 +486,9 @@ export const AITheoryMathStudio: React.FC = () => {
             })}
 
             {isAgentThinking && (
-              <div className="flex items-center space-x-2 text-xs text-slate-500 p-2 bg-white rounded-xl border border-slate-200 max-w-[200px] shadow-sm">
+              <div className="flex items-center space-x-2 text-xs text-slate-600 p-2.5 bg-white rounded-xl border border-blue-200 max-w-[260px] shadow-sm">
                 <Sparkles className="w-4 h-4 text-blue-600 animate-spin" />
-                <span>{selectedAgent.name} is deriving math...</span>
+                <span>Stark Sensei is thinking...</span>
               </div>
             )}
             <div ref={chatEndRef} />
@@ -409,7 +496,7 @@ export const AITheoryMathStudio: React.FC = () => {
 
           {/* Prompt Suggestions Bar */}
           <div className="p-2.5 bg-slate-50 border-t border-slate-200 space-y-1.5">
-            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-1">Suggested Agent Prompts:</div>
+            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-1">Suggested Prompts:</div>
             <div className="flex space-x-1.5 overflow-x-auto pb-1">
               <button
                 onClick={() => handleSendMessage(`Explain physical intuition for ${activeTopic.title}`)}
@@ -421,13 +508,13 @@ export const AITheoryMathStudio: React.FC = () => {
                 onClick={() => handleSendMessage(`Derive the mathematical proof for ${activeTopic.title}`)}
                 className="flex-shrink-0 px-2.5 py-1 rounded-lg bg-white hover:bg-indigo-50 border border-slate-200 text-slate-700 text-[11px] font-semibold transition-all shadow-sm"
               >
-                📐 Formal Proof Derivation
+                📐 Formal Proof
               </button>
               <button
-                onClick={() => handleSendMessage(`Give me a Socratic Quiz question on ${activeTopic.title}`)}
+                onClick={() => handleSendMessage(`Give me a quiz question on ${activeTopic.title}`)}
                 className="flex-shrink-0 px-2.5 py-1 rounded-lg bg-white hover:bg-emerald-50 border border-slate-200 text-slate-700 text-[11px] font-semibold transition-all shadow-sm"
               >
-                🧠 Socratic Quiz Question
+                🧠 Quiz Challenge
               </button>
             </div>
 
@@ -438,7 +525,7 @@ export const AITheoryMathStudio: React.FC = () => {
                 value={inputPrompt}
                 onChange={(e) => setInputPrompt(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                placeholder={`Ask ${selectedAgent.name} about math or theory...`}
+                placeholder="Ask Stark Sensei any question..."
                 className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500 font-medium shadow-sm"
               />
               <button

@@ -24,7 +24,9 @@ import {
   Layers,
   Cpu,
   Compass,
-  BrainCircuit
+  BrainCircuit,
+  Award,
+  Volume2
 } from 'lucide-react';
 
 export const Header: React.FC = () => {
@@ -38,6 +40,7 @@ export const Header: React.FC = () => {
     loadPreset, 
     runAiDebug,
     runAiOptimize,
+    runAiOptimizeAndDebug,
     runAiExplain,
     isAiLoading,
     userBackground,
@@ -47,7 +50,8 @@ export const Header: React.FC = () => {
     setIsAuthModalOpen,
     isArrowAssistActive,
     toggleArrowAssist,
-    setIsVoiceAnimationModalOpen
+    setIsVoiceAnimationModalOpen,
+    openModuleTest
   } = useQuantum();
 
   const [isSaved, setIsSaved] = useState(false);
@@ -150,7 +154,7 @@ export const Header: React.FC = () => {
                   }`}
                 >
                   <BrainCircuit className="w-3.5 h-3.5" />
-                  <span>AI Theory Lab</span>
+                  <span>Theory Lab</span>
                 </button>
 
                 <button
@@ -202,6 +206,16 @@ export const Header: React.FC = () => {
                 </select>
               </div>
 
+              {/* Dynamic Assessment Test Button (Green Button, No Neon) */}
+              <button
+                onClick={() => openModuleTest('dynamic-test', 'Dynamic Quantum Assessment Test')}
+                className="flex items-center space-x-1.5 px-3.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-all shadow-sm border border-emerald-700 active:scale-95"
+                title="Launch Dynamic Professional Test Site"
+              >
+                <Award className="w-3.5 h-3.5 text-white" />
+                <span>Test</span>
+              </button>
+
               {/* Save Work to DB Button */}
               <button
                 onClick={handleSaveCircuit}
@@ -236,7 +250,7 @@ export const Header: React.FC = () => {
                     ? 'bg-indigo-600 text-white' 
                     : user.authProvider === 'google'
                       ? 'bg-blue-600 text-white'
-                      : user.authProvider === 'twilio'
+                      : user.authProvider === 'otp'
                         ? 'bg-emerald-600 text-white'
                         : 'bg-blue-600 text-white'
                 }`}>
@@ -344,47 +358,36 @@ export const Header: React.FC = () => {
             <span>Guide</span>
           </button>
 
-          {/* Diagnostics */}
+          {/* Connected Optimizer & Debugger */}
           <button
-            onClick={() => runAiDebug()}
+            onClick={() => runAiOptimizeAndDebug()}
             disabled={isAiLoading}
-            className="flex items-center space-x-1 px-2.5 py-0.5 rounded-lg bg-white hover:bg-indigo-50 text-indigo-600 border border-slate-200 text-[11px] font-semibold transition-all shadow-sm"
-            title="Circuit Diagnostics"
+            className="flex items-center space-x-1 px-2.5 py-0.5 rounded-lg bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200 text-[11px] font-bold transition-all shadow-sm cursor-pointer"
+            title="AI Connected Circuit Optimizer & Physical Debugger"
           >
-            <Bug className="w-3 h-3 text-indigo-600" />
-            <span>Diagnostics</span>
+            <Zap className="w-3 h-3 text-amber-500 fill-amber-500" />
+            <span>Optimize & Debug</span>
           </button>
 
-          {/* Optimizer */}
-          <button
-            onClick={() => runAiOptimize()}
-            disabled={isAiLoading}
-            className="flex items-center space-x-1 px-2.5 py-0.5 rounded-lg bg-white hover:bg-amber-50 text-amber-600 border border-slate-200 text-[11px] font-semibold transition-all shadow-sm"
-            title="Gate Optimization"
-          >
-            <Zap className="w-3 h-3 text-amber-600" />
-            <span>Optimizer</span>
-          </button>
-
-          {/* Study Assistant */}
+          {/* Tutor */}
           <button
             onClick={() => runAiExplain()}
             disabled={isAiLoading}
-            className="flex items-center space-x-1 px-2.5 py-0.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-[11px] font-semibold transition-all shadow-sm"
-            title="Study Reference Assistant"
+            className="flex items-center space-x-1 px-2.5 py-0.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-[11px] font-bold transition-all shadow-sm cursor-pointer"
+            title="AI Quantum Tutor"
           >
-            <Sparkles className="w-3 h-3 text-blue-600" />
-            <span>Study Assistant</span>
+            <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+            <span>Tutor</span>
           </button>
 
-          {/* Voice & Animation Studio */}
+          {/* Explain in Voice (Button 1 of 2) */}
           <button
             onClick={() => setIsVoiceAnimationModalOpen(true)}
-            className="flex items-center space-x-1 px-2.5 py-0.5 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-[11px] font-bold hover:from-cyan-600 hover:to-blue-700 transition-all shadow-sm"
-            title="Voice Narration & 3D Animation Studio"
+            className="flex items-center space-x-1 px-2.5 py-0.5 rounded-lg bg-cyan-600 hover:bg-cyan-700 text-white text-[11px] font-bold transition-all shadow-sm cursor-pointer"
+            title="Multilingual AI Voice Narration & 3D Bloch Animation"
           >
-            <Mic className="w-3 h-3 text-white animate-pulse" />
-            <span>Voice Studio</span>
+            <Volume2 className="w-3 h-3 text-white animate-pulse" />
+            <span>Explain in Voice</span>
           </button>
         </div>
       </div>

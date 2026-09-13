@@ -9,7 +9,7 @@ export interface User {
   userBackground: UserBackgroundProfile;
   role: UserRole;
   phoneNumber?: string;
-  authProvider?: 'email' | 'google' | 'twilio';
+  authProvider?: 'email' | 'google' | 'otp';
   createdAt?: string;
 }
 
@@ -20,6 +20,7 @@ export interface DBTableSummary {
     total_progress_records: number;
     total_badges: number;
     total_attempts: number;
+    total_module_tests?: number;
     db_engine: string;
   };
   tables: {
@@ -63,8 +64,23 @@ export interface DBTableSummary {
       status: string;
       timestamp: string;
     }>;
+    module_test_results?: Array<{
+      id: number;
+      user_id?: number;
+      student_name: string;
+      module_id: string;
+      module_title: string;
+      mcq_score: number;
+      circuit_score: number;
+      code_score: number;
+      total_score: number;
+      percentage: number;
+      status: string;
+      submitted_at: string;
+    }>;
   };
 }
+
 
 export type GateType = 
   | 'H' 

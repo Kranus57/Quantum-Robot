@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 
 export const StudentDashboard: React.FC = () => {
-  const { studentProgress, selectLessonById, setActiveView, user, setIsAuthModalOpen, pathSummary, launchPathNode } = useQuantum();
+  const { studentProgress, selectLessonById, setActiveView, user, setIsAuthModalOpen, pathSummary, launchPathNode, openModuleTest } = useQuantum();
 
   const completionPct = Math.round(
     (studentProgress.completedLessonIds.length / CURRICULUM_LESSONS.length) * 100
@@ -199,10 +199,15 @@ export const StudentDashboard: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-3">
-                    <span className="text-xs font-mono font-bold text-blue-600">
-                      Quiz: {score}%
-                    </span>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => openModuleTest(lesson.id, lesson.title)}
+                      className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-extrabold text-xs shadow-sm flex items-center space-x-1 transition-all"
+                      title="Take 100-Mark AI Assistant Module Test"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-cyan-200 animate-pulse" />
+                      <span>Take AI Test (100 Marks)</span>
+                    </button>
                     <button
                       onClick={() => {
                         selectLessonById(lesson.id);
