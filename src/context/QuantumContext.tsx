@@ -942,7 +942,12 @@ export const QuantumProvider: React.FC<{ children: ReactNode }> = ({ children })
 
     // Direct LLM API Fall-Safe Connection (OpenRouter API)
     try {
-      const apiKey = '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';
+      const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY || import.meta.env.VITE_OPENAI_API_KEY;
+      if (!apiKey) {
+        console.warn('No VITE_OPENROUTER_API_KEY or VITE_OPENAI_API_KEY found in environment variables.');
+        setIsAiLoading(false);
+        return;
+      }
       const models = [
         'google/gemini-2.0-flash-lite-preview-02-05:free',
         'meta-llama/llama-3.3-70b-instruct:free',
