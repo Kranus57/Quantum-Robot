@@ -503,7 +503,7 @@ class AIEngine:
                 f"The concepts above directly describe the mathematical statevector evolution in your circuit."
             )
 
-        return f"""### 🧠 AI Quantum Tutor: {topic_title}
+        return f"""### 🧠 Tutor: {topic_title}
 **Profile Adaptation:** *{profile_label}*
 
 #### 💡 Comprehensive Physical & Conceptual Breakdown

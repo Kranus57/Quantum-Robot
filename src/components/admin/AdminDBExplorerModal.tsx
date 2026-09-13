@@ -15,8 +15,10 @@ import {
   AlertTriangle,
   ArrowLeft,
   Server,
-  Key
+  Key,
+  Upload
 } from 'lucide-react';
+import { CSVDataModal } from './CSVDataModal';
 
 export const AdminDBExplorerModal: React.FC = () => {
   const { fetchAdminDBData, deleteUserFromDB, setActiveView, user } = useQuantum();
@@ -27,6 +29,7 @@ export const AdminDBExplorerModal: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [isCSVModalOpen, setIsCSVModalOpen] = useState(false);
 
   const loadDB = async () => {
     setIsLoading(true);
@@ -80,7 +83,7 @@ export const AdminDBExplorerModal: React.FC = () => {
   };
 
   return (
-    <div className="h-full bg-slate-50 text-slate-900 overflow-y-auto p-6 space-y-6">
+    <div className="w-full flex-1 h-full bg-slate-50 text-slate-900 overflow-y-auto p-6 space-y-6">
       {/* Top Banner & Control Actions */}
       <div className="p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-900 to-blue-900 text-white border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between shadow-md gap-4">
         <div>
@@ -107,9 +110,18 @@ export const AdminDBExplorerModal: React.FC = () => {
           </button>
 
           <button
+            onClick={() => setIsCSVModalOpen(true)}
+            className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition-all flex items-center space-x-2 cursor-pointer"
+            title="Import and Add CSV Records into Database"
+          >
+            <Upload className="w-4 h-4" />
+            <span>Add CSV to DB</span>
+          </button>
+
+          <button
             onClick={loadDB}
             disabled={isLoading}
-            className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md transition-all flex items-center space-x-2 disabled:opacity-50"
+            className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md transition-all flex items-center space-x-2 disabled:opacity-50 cursor-pointer"
           >
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
             <span>Refresh DB</span>
@@ -407,6 +419,14 @@ export const AdminDBExplorerModal: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* CSV Import & Export Modal (Pure White Background, Non-Neon) */}
+      <CSVDataModal
+        isOpen={isCSVModalOpen}
+        onClose={() => setIsCSVModalOpen(false)}
+        onDataImported={loadDB}
+        dbData={dbData}
+      />
     </div>
   );
 };

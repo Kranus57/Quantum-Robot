@@ -142,7 +142,7 @@ const MainContent: React.FC = () => {
   return (
     <div className="h-screen w-screen flex flex-col bg-quantum-bg overflow-hidden select-none">
       <Header />
-      <main className="flex-1 flex overflow-hidden">
+      <main className="flex-1 flex overflow-hidden w-full">
         {activeView === 'workspace' && <WorkspaceLayout />}
         {activeView === 'learning-path' && <PersonalizedLearningPath />}
         {activeView === 'theory-math' && <AITheoryMathStudio />}

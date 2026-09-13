@@ -26,7 +26,7 @@ export const StudentDashboard: React.FC = () => {
   );
 
   return (
-    <div className="h-full bg-slate-50 overflow-y-auto p-6 space-y-6">
+    <div className="w-full flex-1 h-full bg-slate-50 overflow-y-auto p-6 space-y-6">
       {/* Header Banner */}
       <div className="p-6 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white shadow-md relative overflow-hidden">
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">

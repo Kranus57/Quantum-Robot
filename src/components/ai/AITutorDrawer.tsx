@@ -103,7 +103,7 @@ export const AITutorDrawer: React.FC = () => {
             <Bot className="w-4 h-4 text-blue-600" />
           </div>
           <div>
-            <h3 className="font-bold text-sm text-slate-900">AI Quantum Tutor</h3>
+            <h3 className="font-bold text-sm text-slate-900">Tutor</h3>
             <p className="text-[11px] text-blue-600 font-medium">Neural Physics & Q&A Engine Active</p>
           </div>
         </div>

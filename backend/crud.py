@@ -45,16 +45,18 @@ def create_user(db: Session, email: str, password: str, full_name: str, user_bac
     return create_user_account(db, email, password, full_name, user_background, role)
 
 def create_user_by_phone(db: Session, phone_number: str, full_name: str = "Quantum Learner", user_background: str = "cs-undergrad"):
-    clean_phone = str(phone_number).strip()
+    clean_phone = ''.join(filter(str.isdigit, str(phone_number)))
     pseudo_email = f"{clean_phone}@phone.quantumedu.ai"
+    display_name = full_name if clean_phone in full_name else f"{full_name} ({clean_phone})"
     return create_user_account(
         db=db,
         email=pseudo_email,
         password="sms_otp_authenticated",
-        full_name=f"{full_name} ({clean_phone})",
+        full_name=display_name,
         background=user_background,
         role="student"
     )
+
 
 def authenticate_user(db: Session, email: str, password: str):
     user = get_user_by_email(db, email)
@@ -289,3 +291,99 @@ def delete_user(db: Session, user_id: int):
         db.commit()
         return True
     return False
+
+def import_csv_data(db: Session, table: str, rows: list):
+    """Batch insert or update records from uploaded CSV rows into the database."""
+    inserted_count = 0
+    updated_count = 0
+    errors = []
+
+    for idx, row in enumerate(rows):
+        try:
+            if table == "users":
+                email = str(row.get("email") or "").lower().strip()
+                if not email:
+                    continue
+                full_name = str(row.get("full_name") or row.get("name") or "Enrolled Student").strip()
+                background = str(row.get("background") or row.get("user_background") or "cs-undergrad").strip()
+                role = str(row.get("role") or "student").strip().lower()
+                password = str(row.get("password") or "student123").strip()
+
+                existing = get_user_by_email(db, email)
+                if existing:
+                    existing.full_name = full_name
+                    existing.user_background = background
+                    existing.role = role
+                    updated_count += 1
+                else:
+                    create_user_account(db, email=email, password=password, full_name=full_name, background=background, role=role)
+                    inserted_count += 1
+
+            elif table == "cohort_attempts":
+                student_name = str(row.get("student_name") or row.get("name") or "Student").strip()
+                lesson_title = str(row.get("lesson_title") or row.get("lesson") or "Lesson 1: Superposition").strip()
+                score_val = float(row.get("score") or row.get("quiz_score") or 100)
+                status = str(row.get("status") or ("passed" if score_val >= 70 else "review")).strip()
+                attempt = CohortAttemptModel(
+                    student_id=str(row.get("student_id") or uuid.uuid4().hex[:6]),
+                    student_name=student_name,
+                    lesson_title=lesson_title,
+                    score=score_val,
+                    status=status
+                )
+                db.add(attempt)
+                inserted_count += 1
+
+            elif table == "student_progress":
+                user_id = row.get("user_id")
+                if not user_id and row.get("email"):
+                    u = get_user_by_email(db, str(row["email"]).strip())
+                    if u:
+                        user_id = u.id
+                lesson_id = str(row.get("lesson_id") or "lesson_1").strip()
+                quiz_score = float(row.get("quiz_score") or 100)
+                prog = StudentProgressModel(
+                    user_id=int(user_id) if user_id else None,
+                    lesson_id=lesson_id,
+                    quiz_score=quiz_score
+                )
+                db.add(prog)
+                inserted_count += 1
+
+            elif table == "module_test_results":
+                student_name = str(row.get("student_name") or "Student").strip()
+                module_id = str(row.get("module_id") or "m1").strip()
+                module_title = str(row.get("module_title") or "Quantum Module Assessment").strip()
+                mcq_score = float(row.get("mcq_score") or 35)
+                circuit_score = float(row.get("circuit_score") or 25)
+                code_score = float(row.get("code_score") or 25)
+                total_score = mcq_score + circuit_score + code_score
+                percentage = round((total_score / 100.0) * 100.0)
+                status = str(row.get("status") or ("passed" if percentage >= 60 else "review")).strip()
+                test_model = ModuleTestResultModel(
+                    student_name=student_name,
+                    module_id=module_id,
+                    module_title=module_title,
+                    mcq_score=mcq_score,
+                    circuit_score=circuit_score,
+                    code_score=code_score,
+                    total_score=total_score,
+                    max_possible_score=100.0,
+                    percentage=percentage,
+                    status=status
+                )
+                db.add(test_model)
+                inserted_count += 1
+
+        except Exception as e:
+            errors.append(f"Row {idx + 1}: {str(e)}")
+
+    db.commit()
+    return {
+        "status": "success",
+        "inserted_count": inserted_count,
+        "updated_count": updated_count,
+        "errors": errors,
+        "message": f"Successfully processed {inserted_count} new record(s) and updated {updated_count} record(s)."
+    }
+

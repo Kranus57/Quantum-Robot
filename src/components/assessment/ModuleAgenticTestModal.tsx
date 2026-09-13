@@ -703,7 +703,7 @@ export const ModuleAgenticTestModal: React.FC<ModuleAgenticTestModalProps> = ({
                   value={codeSnippet}
                   onChange={(e) => setCodeSnippet(e.target.value)}
                   rows={12}
-                  className="w-full bg-slate-900 text-slate-100 border border-slate-300 rounded-xl p-4 text-xs font-mono focus:outline-none focus:border-emerald-500 leading-relaxed shadow-inner"
+                  className="w-full bg-[#0a192f] text-cyan-200 border border-blue-900/60 rounded-xl p-4 text-xs font-mono focus:outline-none focus:border-cyan-400 leading-relaxed shadow-inner"
                   placeholder="# Write your Qiskit python solution here..."
                 />
 

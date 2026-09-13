@@ -93,31 +93,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, isMandato
 
   if (!isOpen) return null;
 
-  const handleFillDemoStudent = () => {
-    setAuthRoleTab('student');
-    setAuthMethod('email');
-    setMode('login');
-    setEmail('alex@quantumedu.ai');
-    setPassword('student123');
-    setErrorMsg(null);
-  };
-
   const handleFillDemoAdmin = () => {
     setAuthRoleTab('admin');
     setAuthMethod('email');
     setMode('login');
     setEmail('admin@quantumedu.ai');
     setPassword('admin123');
-    setErrorMsg(null);
-  };
-
-  const handleFillDemoOtp = () => {
-    setAuthRoleTab('student');
-    setAuthMethod('otp');
-    setCountryCode('+1');
-    setPhoneNumber('5550192834');
-    setOtpStep('request');
-    setOtpCode('123456');
     setErrorMsg(null);
   };
 
@@ -146,7 +127,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, isMandato
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!phoneNumber.trim() || phoneNumber.trim().length < 7) {
+    const cleanPhone = phoneNumber.replace(/\D/g, '');
+    if (!cleanPhone || cleanPhone.length < 7) {
       setErrorMsg('Please enter a valid phone number (at least 7 digits).');
       return;
     }
@@ -156,11 +138,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, isMandato
     setSuccessMsg(null);
 
     try {
-      const res = await loginWithTwilioSendOtp(phoneNumber.trim(), countryCode);
+      const res = await loginWithTwilioSendOtp(cleanPhone, countryCode);
       if (res.success) {
-        setSuccessMsg(res.message || `Verification SMS sent to ${countryCode} ${phoneNumber}. Test Code: 123456`);
+        setSuccessMsg(res.message || `Verification SMS sent to ${countryCode} ${cleanPhone}. Test Code: 123456`);
         setOtpStep('verify');
-        setOtpCode('123456'); // Pre-fill test OTP for clean demo experience
+        setOtpCode('123456');
         setResendTimer(60);
       } else {
         setErrorMsg(res.message || 'Failed to send SMS OTP.');
@@ -174,7 +156,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, isMandato
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!otpCode.trim() || otpCode.trim().length !== 6) {
+    const cleanOtp = otpCode.replace(/\D/g, '');
+    const cleanPhone = phoneNumber.replace(/\D/g, '');
+    if (!cleanOtp || cleanOtp.length !== 6) {
       setErrorMsg('Please enter the 6-digit verification code.');
       return;
     }
@@ -185,8 +169,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, isMandato
 
     try {
       const res = await loginWithTwilioVerifyOtp(
-        phoneNumber.trim(), 
-        otpCode.trim(), 
+        cleanPhone, 
+        cleanOtp, 
         fullName || 'Quantum Learner', 
         userBackground
       );
@@ -357,37 +341,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, isMandato
           </div>
         )}
 
-        {/* Quick Fill Demo Account Helpers */}
+        {/* Quick Fill Demo Account Helper */}
         <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
           <div className="text-[10px] font-mono text-slate-500 font-bold uppercase tracking-wider">
-            Quick Fill Demo Accounts:
+            Quick Fill Demo Account:
           </div>
-          <div className="grid grid-cols-3 gap-2">
-            <button
-              type="button"
-              onClick={handleFillDemoStudent}
-              className="py-1.5 px-2 rounded-lg bg-white border border-slate-200 text-blue-700 text-[11px] font-bold hover:bg-blue-50 transition-all flex items-center justify-center space-x-1 shadow-sm"
-            >
-              <GraduationCap className="w-3 h-3 text-blue-600" />
-              <span>Student</span>
-            </button>
-            
+          <div>
             <button
               type="button"
               onClick={handleFillDemoAdmin}
-              className="py-1.5 px-2 rounded-lg bg-white border border-slate-200 text-indigo-700 text-[11px] font-bold hover:bg-indigo-50 transition-all flex items-center justify-center space-x-1 shadow-sm"
+              className="w-full py-2 px-3 rounded-lg bg-white border border-slate-200 text-indigo-700 text-xs font-bold hover:bg-indigo-50 transition-all flex items-center justify-center space-x-2 shadow-sm"
             >
-              <Building2 className="w-3 h-3 text-indigo-600" />
-              <span>Admin</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleFillDemoOtp}
-              className="py-1.5 px-2 rounded-lg bg-white border border-slate-200 text-emerald-700 text-[11px] font-bold hover:bg-emerald-50 transition-all flex items-center justify-center space-x-1 shadow-sm"
-            >
-              <Smartphone className="w-3 h-3 text-emerald-600" />
-              <span>OTP</span>
+              <Building2 className="w-4 h-4 text-indigo-600" />
+              <span>Fill Admin Demo Account (admin@quantumedu.ai)</span>
             </button>
           </div>
         </div>

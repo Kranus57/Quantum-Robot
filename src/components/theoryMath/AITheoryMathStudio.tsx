@@ -358,7 +358,7 @@ export const AITheoryMathStudio: React.FC = () => {
   };
 
   return (
-    <div className="h-full bg-slate-50 flex flex-col overflow-hidden select-none">
+    <div className="w-full flex-1 h-full bg-slate-50 flex flex-col overflow-hidden select-none">
       {/* Top Header: Topic Selector & Agent Studio Status */}
       <div className="h-14 px-4 bg-white border-b border-slate-200 text-slate-900 flex items-center justify-between flex-shrink-0 shadow-sm">
         <div className="flex items-center space-x-3">

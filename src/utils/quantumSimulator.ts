@@ -83,15 +83,21 @@ export function simulateCircuit(
   const activeProbs = isNoise ? noisyProbabilities : probabilities;
 
   if (shots > 0) {
+    const entries = Object.entries(activeProbs);
+    const sumProb = entries.reduce((acc, [, p]) => acc + p, 0);
+    const normProbs = sumProb > 0 
+      ? entries.map(([b, p]) => ({ b, p: p / sumProb }))
+      : entries.map(([b]) => ({ b, p: 1 / numStates }));
+
     for (let s = 0; s < shots; s++) {
       const rand = Math.random();
       let cumulative = 0;
-      let sampled = '';
-      for (const [bitstring, prob] of Object.entries(activeProbs)) {
-        cumulative += prob;
-        if (rand <= cumulative || sampled === '') {
-          sampled = bitstring;
-          if (rand <= cumulative) break;
+      let sampled = normProbs[normProbs.length - 1]?.b || '0'.repeat(qubitCount);
+      for (const { b, p } of normProbs) {
+        cumulative += p;
+        if (rand <= cumulative) {
+          sampled = b;
+          break;
         }
       }
       counts[sampled] = (counts[sampled] || 0) + 1;
@@ -158,6 +164,32 @@ function applyGate(state: Complex[], gate: QuantumGate, numQubits: number): Comp
             const phaseT = new Complex(invSqrt2, invSqrt2);
             nextState[i1] = v1.mul(phaseT);
             break;
+          case 'RX': {
+            const param = gate.param !== undefined ? gate.param : Math.PI / 2;
+            const c = Math.cos(param / 2);
+            const s = Math.sin(param / 2);
+            nextState[i0] = new Complex(c * v0.real + s * v1.imag, c * v0.imag - s * v1.real);
+            nextState[i1] = new Complex(c * v1.real + s * v0.imag, c * v1.imag - s * v0.real);
+            break;
+          }
+          case 'RY': {
+            const param = gate.param !== undefined ? gate.param : Math.PI / 2;
+            const c = Math.cos(param / 2);
+            const s = Math.sin(param / 2);
+            nextState[i0] = new Complex(c * v0.real - s * v1.real, c * v0.imag - s * v1.imag);
+            nextState[i1] = new Complex(s * v0.real + c * v1.real, s * v0.imag + c * v1.imag);
+            break;
+          }
+          case 'RZ': {
+            const param = gate.param !== undefined ? gate.param : Math.PI / 2;
+            const cosHalf = Math.cos(param / 2);
+            const sinHalf = Math.sin(param / 2);
+            const phase0 = new Complex(cosHalf, -sinHalf); // e^{-i theta / 2}
+            const phase1 = new Complex(cosHalf, sinHalf);  // e^{i theta / 2}
+            nextState[i0] = v0.mul(phase0);
+            nextState[i1] = v1.mul(phase1);
+            break;
+          }
         }
       }
     }
@@ -174,6 +206,24 @@ function applyGate(state: Complex[], gate: QuantumGate, numQubits: number): Comp
       if (isControlSet && isTargetZero) {
         const i0 = i;
         const i1 = i | (1 << (numQubits - 1 - target));
+
+        nextState[i0] = state[i1];
+        nextState[i1] = state[i0];
+      }
+    }
+  }
+
+  if (gate.type === 'SWAP' && gate.targetQubit !== undefined) {
+    const q1 = gate.qubit;
+    const q2 = gate.targetQubit;
+
+    for (let i = 0; i < numStates; i++) {
+      const q1Set = (i & (1 << (numQubits - 1 - q1))) !== 0;
+      const q2Zero = (i & (1 << (numQubits - 1 - q2))) === 0;
+
+      if (q1Set && q2Zero) {
+        const i0 = i;
+        const i1 = (i & ~(1 << (numQubits - 1 - q1))) | (1 << (numQubits - 1 - q2));
 
         nextState[i0] = state[i1];
         nextState[i1] = state[i0];
@@ -253,7 +303,7 @@ export function calculateBlochVector(
   }
 
   const resX = Math.round(2 * rho01.real * 1000) / 1000;
-  const resY = Math.round(2 * rho01.imag * 1000) / 1000;
+  const resY = Math.round(-2 * rho01.imag * 1000) / 1000;
   const resZ = Math.round((rho00 - rho11) * 1000) / 1000;
 
   const x = isNaN(resX) ? 0 : resX;
@@ -340,7 +390,11 @@ export function generateQASM(gates: QuantumGate[], numQubits: number): string {
       case 'T': qasm += `t q[${g.qubit}];\n`; break;
       case 'CNOT': qasm += `cx q[${g.qubit}],q[${g.targetQubit}];\n`; break;
       case 'CZ': qasm += `cz q[${g.qubit}],q[${g.targetQubit}];\n`; break;
+      case 'SWAP': qasm += `swap q[${g.qubit}],q[${g.targetQubit}];\n`; break;
       case 'TOFFOLI': qasm += `ccx q[${g.qubit}],q[${g.control2Qubit}],q[${g.targetQubit}];\n`; break;
+      case 'RX': qasm += `rx(${g.param ?? '1.5708'}) q[${g.qubit}];\n`; break;
+      case 'RY': qasm += `ry(${g.param ?? '1.5708'}) q[${g.qubit}];\n`; break;
+      case 'RZ': qasm += `rz(${g.param ?? '1.5708'}) q[${g.qubit}];\n`; break;
       case 'MEASURE': qasm += `measure q[${g.qubit}] -> c[${g.qubit}];\n`; break;
     }
   }
@@ -348,7 +402,7 @@ export function generateQASM(gates: QuantumGate[], numQubits: number): string {
 }
 
 export function generateQiskitCode(gates: QuantumGate[], numQubits: number): string {
-  let code = `from qiskit import QuantumCircuit, Aer, execute\n\n# Initialize ${numQubits}-qubit Quantum Circuit\nqc = QuantumCircuit(${numQubits}, ${numQubits})\n\n`;
+  let code = `from qiskit import QuantumCircuit\nfrom qiskit.quantum_info import Statevector\n\n# Initialize ${numQubits}-qubit Quantum Circuit\nqc = QuantumCircuit(${numQubits}, ${numQubits})\n\n`;
   const sorted = [...gates].sort((a, b) => a.step - b.step);
 
   for (const g of sorted) {
@@ -359,14 +413,18 @@ export function generateQiskitCode(gates: QuantumGate[], numQubits: number): str
       case 'Z': code += `qc.z(${g.qubit})\n`; break;
       case 'S': code += `qc.s(${g.qubit})\n`; break;
       case 'T': code += `qc.t(${g.qubit})\n`; break;
+      case 'RX': code += `qc.rx(${g.param ?? 1.5708}, ${g.qubit})\n`; break;
+      case 'RY': code += `qc.ry(${g.param ?? 1.5708}, ${g.qubit})\n`; break;
+      case 'RZ': code += `qc.rz(${g.param ?? 1.5708}, ${g.qubit})\n`; break;
       case 'CNOT': code += `qc.cx(${g.qubit}, ${g.targetQubit})\n`; break;
       case 'CZ': code += `qc.cz(${g.qubit}, ${g.targetQubit})\n`; break;
+      case 'SWAP': code += `qc.swap(${g.qubit}, ${g.targetQubit})\n`; break;
       case 'TOFFOLI': code += `qc.ccx(${g.qubit}, ${g.control2Qubit}, ${g.targetQubit})\n`; break;
       case 'MEASURE': code += `qc.measure(${g.qubit}, ${g.qubit})\n`; break;
     }
   }
 
-  code += `\n# Run on Aer Statevector Simulator\nsimulator = Aer.get_backend('statevector_simulator')\nresult = execute(qc, simulator).result()\nstatevector = result.get_statevector()\nprint("Statevector:", statevector)\n`;
+  code += `\n# Simulate using Qiskit 2.x Statevector engine\nsv = Statevector.from_instruction(qc)\nprint("Statevector:", sv.data)\nprint("Probabilities:", sv.probabilities_dict())\n`;
   return code;
 }
 
@@ -384,7 +442,11 @@ export function generateCirqCode(gates: QuantumGate[], numQubits: number): strin
       case 'T': code += `circuit.append(cirq.T(qubits[${g.qubit}]))\n`; break;
       case 'CNOT': code += `circuit.append(cirq.CNOT(qubits[${g.qubit}], qubits[${g.targetQubit}]))\n`; break;
       case 'CZ': code += `circuit.append(cirq.CZ(qubits[${g.qubit}], qubits[${g.targetQubit}]))\n`; break;
+      case 'SWAP': code += `circuit.append(cirq.SWAP(qubits[${g.qubit}], qubits[${g.targetQubit}]))\n`; break;
       case 'TOFFOLI': code += `circuit.append(cirq.TOFFOLI(qubits[${g.qubit}], qubits[${g.control2Qubit}], qubits[${g.targetQubit}]))\n`; break;
+      case 'RX': code += `circuit.append(cirq.rx(${g.param ?? 1.5708})(qubits[${g.qubit}]))\n`; break;
+      case 'RY': code += `circuit.append(cirq.ry(${g.param ?? 1.5708})(qubits[${g.qubit}]))\n`; break;
+      case 'RZ': code += `circuit.append(cirq.rz(${g.param ?? 1.5708})(qubits[${g.qubit}]))\n`; break;
       case 'MEASURE': code += `circuit.append(cirq.measure(qubits[${g.qubit}], key='m${g.qubit}'))\n`; break;
     }
   }
@@ -409,8 +471,12 @@ export function generatePennyLaneCode(gates: QuantumGate[], numQubits: number): 
       case 'Z': code += `    qml.PauliZ(wires=${g.qubit})\n`; break;
       case 'S': code += `    qml.S(wires=${g.qubit})\n`; break;
       case 'T': code += `    qml.T(wires=${g.qubit})\n`; break;
+      case 'RX': code += `    qml.RX(${g.param ?? 1.5708}, wires=${g.qubit})\n`; break;
+      case 'RY': code += `    qml.RY(${g.param ?? 1.5708}, wires=${g.qubit})\n`; break;
+      case 'RZ': code += `    qml.RZ(${g.param ?? 1.5708}, wires=${g.qubit})\n`; break;
       case 'CNOT': code += `    qml.CNOT(wires=[${g.qubit}, ${g.targetQubit}])\n`; break;
       case 'CZ': code += `    qml.CZ(wires=[${g.qubit}, ${g.targetQubit}])\n`; break;
+      case 'SWAP': code += `    qml.SWAP(wires=[${g.qubit}, ${g.targetQubit}])\n`; break;
       case 'TOFFOLI': code += `    qml.Toffoli(wires=[${g.qubit}, ${g.control2Qubit}, ${g.targetQubit}])\n`; break;
     }
   }
@@ -431,8 +497,12 @@ export function generateQBraidCode(gates: QuantumGate[], numQubits: number): str
       case 'Z': code += `qc.z(${g.qubit})\n`; break;
       case 'S': code += `qc.s(${g.qubit})\n`; break;
       case 'T': code += `qc.t(${g.qubit})\n`; break;
+      case 'RX': code += `qc.rx(${g.param ?? 1.5708}, ${g.qubit})\n`; break;
+      case 'RY': code += `qc.ry(${g.param ?? 1.5708}, ${g.qubit})\n`; break;
+      case 'RZ': code += `qc.rz(${g.param ?? 1.5708}, ${g.qubit})\n`; break;
       case 'CNOT': code += `qc.cx(${g.qubit}, ${g.targetQubit})\n`; break;
       case 'CZ': code += `qc.cz(${g.qubit}, ${g.targetQubit})\n`; break;
+      case 'SWAP': code += `qc.swap(${g.qubit}, ${g.targetQubit})\n`; break;
       case 'TOFFOLI': code += `qc.ccx(${g.qubit}, ${g.control2Qubit}, ${g.targetQubit})\n`; break;
       case 'MEASURE': code += `qc.measure(${g.qubit}, ${g.qubit})\n`; break;
     }

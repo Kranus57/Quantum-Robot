@@ -17,7 +17,9 @@ import {
   Compass,
   Zap,
   Layers,
-  PieChart
+  PieChart,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 
 export const StudentAnalysis: React.FC = () => {
@@ -60,8 +62,30 @@ export const StudentAnalysis: React.FC = () => {
       ? user.fullName 
       : 'Student';
 
+  const [isPageFullscreen, setIsPageFullscreen] = React.useState<boolean>(false);
+
+  const togglePageFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+      setIsPageFullscreen(true);
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+        setIsPageFullscreen(false);
+      }
+    }
+  };
+
+  React.useEffect(() => {
+    const onFsChange = () => {
+      setIsPageFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', onFsChange);
+    return () => document.removeEventListener('fullscreenchange', onFsChange);
+  }, []);
+
   return (
-    <div className="h-full bg-slate-50 text-slate-900 overflow-y-auto p-6 space-y-6">
+    <div className="w-full flex-1 h-full bg-slate-50 text-slate-900 overflow-y-auto p-6 space-y-6">
       {/* Header Banner */}
       <div className="p-6 rounded-2xl bg-gradient-to-r from-purple-700 via-indigo-600 to-blue-700 text-white shadow-lg relative overflow-hidden">
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -90,6 +114,14 @@ export const StudentAnalysis: React.FC = () => {
           </div>
 
           <div className="flex items-center space-x-3">
+            <button
+              onClick={togglePageFullscreen}
+              className="px-3.5 py-2 rounded-xl bg-white/20 hover:bg-white/30 border border-white/30 text-white font-bold text-xs shadow-md transition-all flex items-center space-x-2 cursor-pointer"
+              title="Toggle Fullscreen Mode"
+            >
+              {isPageFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+              <span>{isPageFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
+            </button>
             <button
               onClick={() => setActiveView('learning-path')}
               className="px-4 py-2 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-bold text-xs shadow-md transition-all flex items-center space-x-2"

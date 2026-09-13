@@ -153,9 +153,9 @@ def google_auth(payload: GoogleAuthSchema, db: Session = Depends(get_db)):
 # Mobile SMS OTP Authentication Routes
 @app.post("/api/auth/twilio/send-otp")
 def send_twilio_otp(payload: TwilioSendOtpSchema):
-    phone_clean = payload.phoneNumber.strip()
+    phone_clean = ''.join(filter(str.isdigit, payload.phoneNumber))
     if len(phone_clean) < 7:
-        raise HTTPException(status_code=400, detail="Invalid phone number format.")
+        raise HTTPException(status_code=400, detail="Invalid phone number format. Must contain at least 7 digits.")
     
     return {
         "status": "success",
@@ -166,10 +166,14 @@ def send_twilio_otp(payload: TwilioSendOtpSchema):
 
 @app.post("/api/auth/twilio/verify-otp")
 def verify_twilio_otp(payload: TwilioVerifyOtpSchema, db: Session = Depends(get_db)):
-    if payload.otpCode.strip() != "123456" and payload.otpCode.strip() != "888888":
+    clean_otp = ''.join(filter(str.isdigit, payload.otpCode))
+    if clean_otp != "123456" and clean_otp != "888888":
         raise HTTPException(status_code=400, detail="Invalid 6-digit OTP verification code. Use '123456' for testing.")
     
-    phone_clean = payload.phoneNumber.strip()
+    phone_clean = ''.join(filter(str.isdigit, payload.phoneNumber))
+    if len(phone_clean) < 7:
+        raise HTTPException(status_code=400, detail="Invalid phone number format. Must contain at least 7 digits.")
+
     existing = crud.get_user_by_phone(db, phone_clean)
     if existing:
         user = existing
@@ -342,6 +346,36 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
     if not deleted:
         raise HTTPException(status_code=404, detail="User not found.")
     return {"status": "success", "message": f"User {user_id} deleted successfully."}
+
+from pydantic import BaseModel as _BaseModel
+from typing import List as _List, Dict as _Dict, Any as _Any
+
+class CSVImportPayload(_BaseModel):
+    table: str
+    rows: _List[_Dict[str, _Any]]
+
+@app.post("/api/admin/import-csv")
+def import_csv_to_db(payload: CSVImportPayload, db: Session = Depends(get_db)):
+    result = crud.import_csv_data(db, payload.table, payload.rows)
+    return result
+
+# Multi-Framework Quantum Circuit Simulation Route
+@app.post("/api/circuit/simulate")
+def simulate_circuit(payload: CircuitRequestSchema):
+    gates_dict = [g.dict() for g in payload.gates]
+    framework_lower = (payload.framework or "qiskit").lower()
+
+    if framework_lower == "qiskit":
+        return QiskitDriver.execute_circuit(gates_dict, payload.qubitCount, payload.shots)
+    elif framework_lower == "cirq":
+        return CirqDriver.execute_circuit(gates_dict, payload.qubitCount, payload.shots)
+    elif framework_lower == "pennylane":
+        return PennyLaneDriver.execute_circuit(gates_dict, payload.qubitCount, payload.shots)
+    elif framework_lower == "qbraid":
+        return QBraidDriver.execute_circuit(gates_dict, payload.qubitCount, payload.shots)
+    else:
+        return NativeQuantumSimulator.run_simulation(gates_dict, payload.qubitCount, payload.shots)
+
 
 @app.post("/api/ai/explain")
 def ai_explain(req: AIExplainRequestSchema):

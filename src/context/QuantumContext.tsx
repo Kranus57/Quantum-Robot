@@ -630,11 +630,12 @@ export const QuantumProvider: React.FC<{ children: ReactNode }> = ({ children })
   };
 
   const loginWithTwilioSendOtp = async (phoneNumber: string, countryCode: string) => {
+    const cleanPhone = phoneNumber.replace(/\D/g, '');
     try {
       const resp = await fetch('/api/auth/twilio/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phoneNumber, countryCode })
+        body: JSON.stringify({ phoneNumber: cleanPhone, countryCode })
       });
       const data = await resp.json();
       if (!resp.ok) {
@@ -643,16 +644,19 @@ export const QuantumProvider: React.FC<{ children: ReactNode }> = ({ children })
       return { success: true, message: data.message };
     } catch (e) {
       // Offline fallback
-      return { success: true, message: `Verification OTP SMS sent to ${countryCode} ${phoneNumber}. Use test OTP: 123456` };
+      return { success: true, message: `Verification OTP SMS sent to ${countryCode} ${cleanPhone}. Use test OTP: 123456` };
     }
   };
 
   const loginWithTwilioVerifyOtp = async (phoneNumber: string, otpCode: string, fullName?: string, background?: UserBackgroundProfile) => {
+    const cleanPhone = phoneNumber.replace(/\D/g, '');
+    const cleanOtp = otpCode.replace(/\D/g, '');
+
     try {
       const resp = await fetch('/api/auth/twilio/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phoneNumber, otpCode, fullName, userBackground: background })
+        body: JSON.stringify({ phoneNumber: cleanPhone, otpCode: cleanOtp, fullName, userBackground: background })
       });
       const data = await resp.json();
       if (resp.ok && data.user) {
@@ -662,10 +666,15 @@ export const QuantumProvider: React.FC<{ children: ReactNode }> = ({ children })
           fullName: data.user.fullName,
           userBackground: (data.user.userBackground || 'cs-undergrad') as UserBackgroundProfile,
           role: 'student',
-          phoneNumber,
+          phoneNumber: cleanPhone,
           authProvider: 'otp',
           createdAt: data.user.createdAt
         };
+
+        const registered = JSON.parse(localStorage.getItem('quantum_registered_users') || '[]');
+        const updated = [ { ...tUser, password: 'sms_otp_user' }, ...registered.filter((u: any) => u.email.toLowerCase() !== tUser.email.toLowerCase()) ];
+        localStorage.setItem('quantum_registered_users', JSON.stringify(updated));
+
         setUser(tUser);
         setUserBackground(tUser.userBackground);
         setIsAuthModalOpen(false);
@@ -678,17 +687,17 @@ export const QuantumProvider: React.FC<{ children: ReactNode }> = ({ children })
       // Offline fallback
     }
 
-    if (otpCode !== '123456' && otpCode !== '888888') {
+    if (cleanOtp !== '123456' && cleanOtp !== '888888') {
       return { success: false, message: 'Invalid 6-digit OTP code. Enter 123456 for testing.' };
     }
 
     const tUser: User = {
       id: Math.floor(Math.random() * 9000) + 1000,
-      email: `${phoneNumber}@phone.quantumedu.ai`,
-      fullName: fullName || `Quantum Explorer (${phoneNumber})`,
+      email: `${cleanPhone}@phone.quantumedu.ai`,
+      fullName: fullName || `Quantum Explorer (${cleanPhone})`,
       userBackground: background || 'cs-undergrad',
       role: 'student',
-      phoneNumber,
+      phoneNumber: cleanPhone,
       authProvider: 'otp',
       createdAt: new Date().toISOString()
     };
@@ -877,13 +886,50 @@ export const QuantumProvider: React.FC<{ children: ReactNode }> = ({ children })
     }
   };
 
-  const runSimulation = () => {
-    const res = simulateCircuit(gates, qubitCount, 1024, framework, noiseModel);
-    setSimulationResult(res);
+  const runSimulation = async () => {
+    const localRes = simulateCircuit(gates, qubitCount, 1024, framework, noiseModel);
+    setSimulationResult(localRes);
     setStudentProgress(prev => ({
       ...prev,
       totalCircuitsRun: prev.totalCircuitsRun + 1
     }));
+    addTerminalLog('info', `Simulating ${qubitCount}-qubit circuit with ${framework.toUpperCase()} engine (${gates.length} gate(s))...`);
+
+    try {
+      const resp = await fetch('/api/circuit/simulate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          qubitCount,
+          gates: gates.map(g => ({
+            id: g.id,
+            type: g.type,
+            qubit: g.qubit,
+            targetQubit: g.targetQubit,
+            control2Qubit: g.control2Qubit,
+            param: g.param,
+            step: g.step
+          })),
+          shots: 1024,
+          framework
+        })
+      });
+
+      if (resp.ok) {
+        const backendRes = await resp.json();
+        if (backendRes && backendRes.stateVector && backendRes.probabilities) {
+          setSimulationResult({
+            ...backendRes,
+            noisyProbabilities: localRes.noisyProbabilities,
+            qasm: backendRes.qasm || localRes.qasm,
+            fidelity: localRes.fidelity
+          });
+          addTerminalLog('system', `[${framework.toUpperCase()} SUCCESS]: Simulation completed via backend in ${backendRes.executionTimeMs}ms.`);
+        }
+      }
+    } catch (e) {
+      // Offline fallback already active via localRes
+    }
   };
 
   const selectLessonById = (lessonId: string) => {
@@ -971,7 +1017,7 @@ export const QuantumProvider: React.FC<{ children: ReactNode }> = ({ children })
               messages: [
                 {
                   role: 'system',
-                  content: `You are AI Quantum Tutor. Answer the user prompt '${queryText}' directly, accurately, and thoroughly with Markdown formatting.`
+                  content: `You are a Tutor. Answer the user prompt '${queryText}' directly, accurately, and thoroughly with Markdown formatting.`
                 },
                 { role: 'user', content: queryText }
               ],
@@ -1056,7 +1102,7 @@ export const QuantumProvider: React.FC<{ children: ReactNode }> = ({ children })
         codeExample = `from qiskit import QuantumCircuit\n\n# Quantum demonstration for: ${queryText.slice(0, 35)}\nqc = QuantumCircuit(${Math.max(2, qubitCount)}, ${Math.max(2, qubitCount)})\nqc.h(0)        # Initialize superposition\nqc.cx(0, 1)    # Multi-qubit entanglement\nqc.rz(0.785, 1)# Phase transformation\nqc.measure_all()\nprint(qc.draw())`;
       }
 
-      const explanation = `### 🧠 AI Quantum Tutor: ${topicTitle}
+      const explanation = `### 🧠 Tutor: ${topicTitle}
 **Profile Adaptation:** *${userBackground.toUpperCase()} Track*
 
 #### 💡 Comprehensive Physical & Conceptual Breakdown

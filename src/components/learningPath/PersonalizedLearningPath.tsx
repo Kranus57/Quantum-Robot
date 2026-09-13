@@ -10,16 +10,12 @@ import {
   CheckCircle2, 
   Lock, 
   Play, 
-  ArrowRight, 
   BookOpen, 
-  Award, 
-  Sliders, 
   Globe, 
   Network, 
   Cpu, 
   Brain,
   GraduationCap,
-  ChevronRight,
   Info,
   X,
   Zap,
@@ -63,27 +59,23 @@ export const PersonalizedLearningPath: React.FC = () => {
   };
 
   return (
-    <div className="h-full bg-slate-50 overflow-y-auto p-6 space-y-6 select-none">
+    <div className="w-full flex-1 h-full bg-white overflow-y-auto p-6 space-y-6 select-none">
       {/* Top Banner: User Profile, Goal Selection & Dynamic Pace */}
-      <div className="p-6 rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950 to-blue-900 text-white shadow-xl relative overflow-hidden">
-        {/* Ambient Glow Effects */}
-        <div className="absolute -top-24 -right-24 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
-
+      <div className="p-6 rounded-2xl bg-white border border-slate-200 text-slate-900 shadow-sm relative overflow-hidden">
         <div className="relative z-10 space-y-5">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-white/10 pb-5">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-slate-200 pb-5">
             <div>
-              <div className="flex items-center space-x-2 text-xs font-mono text-cyan-300 mb-1">
-                <Compass className="w-4 h-4 animate-spin-slow text-cyan-400" />
-                <span>AI Adaptive Learning Pathway Engine</span>
-                <span className="px-2 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-400/30 text-[10px] font-bold text-cyan-200">
+              <div className="flex items-center space-x-2 text-xs font-mono text-blue-600 mb-1">
+                <Compass className="w-4 h-4 text-blue-600" />
+                <span className="font-bold">Adaptive Learning Pathway Engine</span>
+                <span className="px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-[10px] font-bold text-blue-700">
                   REAL-TIME ADAPTIVE
                 </span>
               </div>
-              <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">
+              <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
                 {user ? `Personalized Pathway for ${user.fullName}` : 'Personalized Quantum Roadmap'}
               </h1>
-              <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
+              <p className="text-xs text-slate-600 mt-1 max-w-2xl leading-relaxed font-medium">
                 Tailored dynamically based on your academic profile ({userBackground.toUpperCase()}) and chosen learning goal.
               </p>
             </div>
@@ -91,7 +83,7 @@ export const PersonalizedLearningPath: React.FC = () => {
             {/* Quick Action Button to Lab Workspace */}
             <button
               onClick={() => setActiveView('workspace')}
-              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-bold text-xs shadow-lg shadow-blue-500/20 transition-all flex items-center space-x-2 border border-white/20 active:scale-95"
+              className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm transition-all flex items-center space-x-2 border border-blue-600 active:scale-95 cursor-pointer"
             >
               <Play className="w-4 h-4 fill-white" />
               <span>Launch Lab Workspace</span>
@@ -101,15 +93,15 @@ export const PersonalizedLearningPath: React.FC = () => {
           {/* Goal & Track Controls */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
             {/* Learning Goal Selector */}
-            <div className="p-3.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/15 space-y-1.5">
-              <label className="text-[11px] font-bold text-slate-300 flex items-center space-x-1.5">
-                <Target className="w-3.5 h-3.5 text-cyan-400" />
+            <div className="p-3.5 rounded-xl bg-white border border-slate-200 space-y-1.5 shadow-xs">
+              <label className="text-[11px] font-bold text-slate-700 flex items-center space-x-1.5">
+                <Target className="w-3.5 h-3.5 text-blue-600" />
                 <span>Target Focus Goal:</span>
               </label>
               <select
                 value={learningGoal}
                 onChange={(e) => handleGoalChange(e.target.value as LearningGoal)}
-                className="w-full bg-slate-900/90 border border-white/20 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-cyan-400"
+                className="w-full bg-white border border-slate-300 text-slate-900 rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-blue-600 shadow-xs"
               >
                 <option value="foundations">Foundations & Superposition</option>
                 <option value="quantum-algorithms">Quantum Algorithms & Fourier Transform</option>
@@ -119,15 +111,15 @@ export const PersonalizedLearningPath: React.FC = () => {
             </div>
 
             {/* Academic Track Switcher */}
-            <div className="p-3.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/15 space-y-1.5">
-              <label className="text-[11px] font-bold text-slate-300 flex items-center space-x-1.5">
-                <GraduationCap className="w-3.5 h-3.5 text-blue-400" />
+            <div className="p-3.5 rounded-xl bg-white border border-slate-200 space-y-1.5 shadow-xs">
+              <label className="text-[11px] font-bold text-slate-700 flex items-center space-x-1.5">
+                <GraduationCap className="w-3.5 h-3.5 text-indigo-600" />
                 <span>Academic Background:</span>
               </label>
               <select
                 value={userBackground}
                 onChange={(e) => setUserBackground(e.target.value as UserBackgroundProfile)}
-                className="w-full bg-slate-900/90 border border-white/20 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-blue-400"
+                className="w-full bg-white border border-slate-300 text-slate-900 rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-blue-600 shadow-xs"
               >
                 <option value="high-school">High School (Intuitive Analogies)</option>
                 <option value="cs-undergrad">CS Undergrad (Matrix & Code Logic)</option>
@@ -136,20 +128,20 @@ export const PersonalizedLearningPath: React.FC = () => {
             </div>
 
             {/* Learning Pace Selector */}
-            <div className="p-3.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/15 space-y-1.5">
-              <label className="text-[11px] font-bold text-slate-300 flex items-center space-x-1.5">
-                <Clock className="w-3.5 h-3.5 text-amber-400" />
+            <div className="p-3.5 rounded-xl bg-white border border-slate-200 space-y-1.5 shadow-xs">
+              <label className="text-[11px] font-bold text-slate-700 flex items-center space-x-1.5">
+                <Clock className="w-3.5 h-3.5 text-amber-600" />
                 <span>Target Pace:</span>
               </label>
-              <div className="flex items-center space-x-1 bg-slate-900/80 p-1 rounded-lg border border-white/15">
+              <div className="flex items-center space-x-1 bg-slate-50 p-1 rounded-lg border border-slate-200">
                 {(['casual', 'standard', 'intensive'] as PaceSetting[]).map((p) => (
                   <button
                     key={p}
                     onClick={() => handlePaceChange(p)}
-                    className={`flex-1 py-1 rounded text-[10px] font-bold uppercase transition-all ${
+                    className={`flex-1 py-1 rounded text-[10px] font-bold uppercase transition-all cursor-pointer ${
                       learningPace === p
-                        ? 'bg-amber-500 text-slate-900 shadow-sm'
-                        : 'text-slate-300 hover:text-white'
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
                     {p === 'casual' ? '15m/d' : p === 'standard' ? '30m/d' : '60m/d'}
@@ -239,7 +231,7 @@ export const PersonalizedLearningPath: React.FC = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {pathSummary.skills.map((skill) => (
-            <div key={skill.category} className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+            <div key={skill.category} className="p-4 rounded-xl bg-white border border-slate-200 space-y-2 shadow-xs">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-900 flex items-center space-x-1.5">
                   {getDomainIcon(skill.category)}
@@ -248,14 +240,14 @@ export const PersonalizedLearningPath: React.FC = () => {
                 <span className="text-xs font-mono font-bold text-blue-600">{skill.score}%</span>
               </div>
               
-              <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
                 <div 
                   className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-all duration-700" 
                   style={{ width: `${skill.score}%` }} 
                 />
               </div>
 
-              <p className="text-[11px] text-slate-500 leading-tight">{skill.description}</p>
+              <p className="text-[11px] text-slate-500 leading-tight font-medium">{skill.description}</p>
             </div>
           ))}
         </div>
@@ -269,7 +261,7 @@ export const PersonalizedLearningPath: React.FC = () => {
               <Compass className="w-5 h-5 text-blue-600" />
               <span>Your Custom Learning Sequence Roadmap</span>
             </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-500 mt-0.5 font-medium">
               Click any node to preview tailored content, adaptive math explanations, or launch in workspace.
             </p>
           </div>
@@ -302,8 +294,8 @@ export const PersonalizedLearningPath: React.FC = () => {
                       : isRecommended
                       ? 'bg-indigo-600 text-white shadow-indigo-500/30 animate-bounce'
                       : isLocked
-                      ? 'bg-slate-200 text-slate-400 border border-slate-300'
-                      : 'bg-blue-500 text-white'
+                      ? 'bg-slate-100 text-slate-400 border border-slate-300'
+                      : 'bg-blue-600 text-white'
                   }`}
                 >
                   {isMastered ? (
@@ -319,11 +311,11 @@ export const PersonalizedLearningPath: React.FC = () => {
                 <div 
                   className={`p-5 rounded-2xl border transition-all ${
                     isRecommended
-                      ? 'bg-gradient-to-r from-indigo-50 via-white to-blue-50 border-indigo-400 shadow-md ring-2 ring-indigo-500/20'
+                      ? 'bg-indigo-50/60 border-indigo-300 shadow-md ring-2 ring-indigo-500/20'
                       : isMastered
                       ? 'bg-emerald-50/40 border-emerald-200 hover:border-emerald-300'
                       : isLocked
-                      ? 'bg-slate-50/70 border-slate-200 opacity-75'
+                      ? 'bg-white border-slate-200 opacity-60'
                       : 'bg-white border-slate-200 hover:border-blue-300'
                   }`}
                 >
@@ -331,7 +323,7 @@ export const PersonalizedLearningPath: React.FC = () => {
                     <div className="space-y-1.5 flex-1">
                       <div className="flex items-center space-x-2">
                         {isRecommended && (
-                          <span className="px-2 py-0.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold uppercase tracking-wider shadow-sm animate-pulse">
+                          <span className="px-2 py-0.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold uppercase tracking-wider shadow-xs animate-pulse">
                             ★ RECOMMENDED NEXT STEP
                           </span>
                         )}
@@ -347,7 +339,7 @@ export const PersonalizedLearningPath: React.FC = () => {
                         {node.title}
                       </h4>
                       
-                      <p className="text-xs text-slate-600 leading-relaxed">
+                      <p className="text-xs text-slate-600 leading-relaxed font-medium">
                         {node.recommendedReason}
                       </p>
 
@@ -364,7 +356,7 @@ export const PersonalizedLearningPath: React.FC = () => {
                     <div className="flex items-center space-x-2 flex-shrink-0">
                       <button
                         onClick={() => setSelectedInspectNode(node)}
-                        className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-semibold shadow-sm transition-all flex items-center space-x-1.5"
+                        className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-semibold shadow-xs transition-all flex items-center space-x-1.5 cursor-pointer"
                       >
                         <Info className="w-3.5 h-3.5 text-blue-600" />
                         <span>Inspect Preview</span>
@@ -372,16 +364,16 @@ export const PersonalizedLearningPath: React.FC = () => {
 
                       <button
                         onClick={() => openModuleTest(node.lessonId, node.title)}
-                        className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold text-xs shadow-md transition-all flex items-center space-x-1.5 active:scale-95 border border-white/20"
+                        className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-xs transition-all flex items-center space-x-1.5 active:scale-95 cursor-pointer"
                       >
                         <Zap className="w-3.5 h-3.5 fill-white" />
-                        <span>Take Agentic AI Test</span>
+                        <span>Take Module Test</span>
                       </button>
 
                       <button
                         onClick={() => launchPathNode(node.lessonId)}
                         disabled={isLocked}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 shadow-sm active:scale-95 ${
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 shadow-xs active:scale-95 cursor-pointer ${
                           isRecommended
                             ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-500/20'
                             : isMastered
@@ -405,17 +397,17 @@ export const PersonalizedLearningPath: React.FC = () => {
 
       {/* Adaptive Explanation Inspector Modal */}
       {selectedInspectNode && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-2xl w-full border border-slate-200 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95">
             {/* Modal Header */}
-            <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
-              <div className="flex items-center space-x-2 text-xs font-mono text-cyan-300">
-                <Sparkles className="w-4 h-4 text-cyan-400" />
-                <span>Adaptive Explanation Inspector</span>
+            <div className="p-4 bg-white border-b border-slate-200 text-slate-900 flex items-center justify-between">
+              <div className="flex items-center space-x-2 text-xs font-mono text-blue-600">
+                <Sparkles className="w-4 h-4 text-blue-600" />
+                <span className="font-bold">Adaptive Explanation Inspector</span>
               </div>
               <button 
                 onClick={() => setSelectedInspectNode(null)}
-                className="p-1 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-all"
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -428,18 +420,18 @@ export const PersonalizedLearningPath: React.FC = () => {
                   {selectedInspectNode.categoryLabel}
                 </span>
                 <h3 className="text-xl font-bold text-slate-900 mt-1">{selectedInspectNode.title}</h3>
-                <p className="text-xs text-slate-500 mt-0.5">{selectedInspectNode.recommendedReason}</p>
+                <p className="text-xs text-slate-500 mt-0.5 font-medium">{selectedInspectNode.recommendedReason}</p>
               </div>
 
               {/* Perspective Mode Switcher Tabs */}
               <div className="space-y-2">
                 <div className="text-xs font-bold text-slate-800">Select Adaptive Explanation Mode:</div>
-                <div className="flex items-center space-x-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200">
+                <div className="flex items-center space-x-1.5 bg-slate-50 p-1 rounded-xl border border-slate-200">
                   <button
                     onClick={() => setActiveExplanationTab('intuitive')}
-                    className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all ${
+                    className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                       activeExplanationTab === 'intuitive'
-                        ? 'bg-white text-blue-600 shadow-sm border border-slate-200 font-bold'
+                        ? 'bg-white text-blue-600 shadow-xs border border-slate-200 font-bold'
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
@@ -447,9 +439,9 @@ export const PersonalizedLearningPath: React.FC = () => {
                   </button>
                   <button
                     onClick={() => setActiveExplanationTab('csLogic')}
-                    className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all ${
+                    className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                       activeExplanationTab === 'csLogic'
-                        ? 'bg-white text-indigo-600 shadow-sm border border-slate-200 font-bold'
+                        ? 'bg-white text-indigo-600 shadow-xs border border-slate-200 font-bold'
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
@@ -457,9 +449,9 @@ export const PersonalizedLearningPath: React.FC = () => {
                   </button>
                   <button
                     onClick={() => setActiveExplanationTab('physicsMath')}
-                    className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all ${
+                    className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                       activeExplanationTab === 'physicsMath'
-                        ? 'bg-white text-purple-600 shadow-sm border border-slate-200 font-bold'
+                        ? 'bg-white text-purple-600 shadow-xs border border-slate-200 font-bold'
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
@@ -469,11 +461,11 @@ export const PersonalizedLearningPath: React.FC = () => {
               </div>
 
               {/* Formatted Adaptive Explanation Text */}
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 leading-relaxed text-xs text-slate-800 font-mono shadow-inner space-y-2">
+              <div className="p-4 rounded-xl bg-white border border-slate-200 leading-relaxed text-xs text-slate-800 font-mono shadow-xs space-y-2">
                 <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200 pb-1.5">
                   {activeExplanationTab === 'intuitive' ? '🎨 High School Level Analogies' : activeExplanationTab === 'physicsMath' ? '🔬 Physics PhD Dirac Notation' : '💻 CS Matrix Logic'}
                 </div>
-                <p className="whitespace-pre-line text-xs font-sans text-slate-800 leading-normal">
+                <p className="whitespace-pre-line text-xs font-sans text-slate-800 leading-normal font-medium">
                   {selectedInspectNode.adaptiveExplanations[activeExplanationTab]}
                 </p>
               </div>
@@ -482,7 +474,7 @@ export const PersonalizedLearningPath: React.FC = () => {
               <div className="pt-2 flex items-center justify-end space-x-3 border-t border-slate-200">
                 <button
                   onClick={() => setSelectedInspectNode(null)}
-                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all"
+                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
                 >
                   Close
                 </button>
@@ -493,7 +485,7 @@ export const PersonalizedLearningPath: React.FC = () => {
                     setSelectedInspectNode(null);
                     launchPathNode(lessonId);
                   }}
-                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-md flex items-center space-x-1.5"
+                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-sm flex items-center space-x-1.5 cursor-pointer"
                 >
                   <Play className="w-3.5 h-3.5 fill-white" />
                   <span>Open in Workspace</span>

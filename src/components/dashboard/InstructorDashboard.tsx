@@ -20,8 +20,12 @@ import {
   X,
   Sparkles,
   ExternalLink,
-  ChevronRight
+  ChevronRight,
+  Maximize2,
+  Minimize2,
+  Upload
 } from 'lucide-react';
+import { CSVDataModal, downloadCSV } from '../admin/CSVDataModal';
 
 interface StudentStudyDetail {
   student: { id: number; full_name: string; email: string; background: string };
@@ -35,6 +39,13 @@ export const InstructorDashboard: React.FC = () => {
   const [dbData, setDbData] = useState<DBTableSummary | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   
+  // Fullscreen state
+  const [isPageFullscreen, setIsPageFullscreen] = useState<boolean>(false);
+  const [isModalExpanded, setIsModalExpanded] = useState<boolean>(false);
+
+  // CSV Data Modal State
+  const [isCSVModalOpen, setIsCSVModalOpen] = useState<boolean>(false);
+
   // Module Test Results State
   const [moduleTestResults, setModuleTestResults] = useState<any[]>([]);
   const [selectedTestAttempt, setSelectedTestAttempt] = useState<any | null>(null);
@@ -43,6 +54,26 @@ export const InstructorDashboard: React.FC = () => {
   const [selectedStudentStudy, setSelectedStudentStudy] = useState<StudentStudyDetail | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [isFetchingStudentDetail, setIsFetchingStudentDetail] = useState<boolean>(false);
+
+  const togglePageFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+      setIsPageFullscreen(true);
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+        setIsPageFullscreen(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    const onFsChange = () => {
+      setIsPageFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', onFsChange);
+    return () => document.removeEventListener('fullscreenchange', onFsChange);
+  }, []);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -100,7 +131,7 @@ export const InstructorDashboard: React.FC = () => {
     : 0;
 
   return (
-    <div className="h-full bg-slate-50 text-slate-900 overflow-y-auto p-6 space-y-6 relative">
+    <div className="w-full flex-1 h-full bg-slate-50 text-slate-900 overflow-y-auto p-6 space-y-6 relative">
       {/* Header Banner */}
       <div className="p-6 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
@@ -115,16 +146,56 @@ export const InstructorDashboard: React.FC = () => {
         </div>
 
         <div className="flex items-center space-x-2">
+          <button
+            onClick={togglePageFullscreen}
+            className="px-3.5 py-2 rounded-xl bg-white/20 hover:bg-white/30 border border-white/30 text-xs font-bold text-white transition-all flex items-center space-x-2 shadow-sm cursor-pointer"
+            title="Toggle True Fullscreen Mode"
+          >
+            {isPageFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+            <span>{isPageFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
+          </button>
+
           <button 
             onClick={loadData}
             disabled={isLoading}
-            className="px-3.5 py-2 rounded-xl bg-white/20 hover:bg-white/30 border border-white/30 text-xs font-bold text-white transition-all flex items-center space-x-2"
+            className="px-3.5 py-2 rounded-xl bg-white/20 hover:bg-white/30 border border-white/30 text-xs font-bold text-white transition-all flex items-center space-x-2 cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
             <span>Refresh DB</span>
           </button>
 
-          <button className="px-4 py-2 rounded-xl bg-white text-blue-700 font-bold text-xs shadow-md hover:bg-blue-50 transition-all flex items-center space-x-2">
+          <button
+            onClick={() => setIsCSVModalOpen(true)}
+            className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 border border-emerald-500 text-white font-bold text-xs shadow-md transition-all flex items-center space-x-2 cursor-pointer"
+            title="Upload and Add CSV Records directly to Database"
+          >
+            <Upload className="w-4 h-4" />
+            <span>Add CSV to DB</span>
+          </button>
+
+          <button 
+            onClick={() => {
+              const users = dbData?.tables.users || [];
+              const progress = dbData?.tables.student_progress || [];
+              const circuits = dbData?.tables.quantum_circuits || [];
+              const attempts = dbData?.tables.cohort_attempts || [];
+              const headers = ['Student ID', 'Full Name', 'Email', 'Track Background', 'Role', 'Completed Lessons', 'Saved Circuits Count', 'Submissions Count', 'Registered At'];
+              const rows = users.map((u: any) => [
+                u.id,
+                u.full_name,
+                u.email,
+                u.background || 'cs-undergrad',
+                u.role || 'student',
+                progress.filter((p: any) => p.user_id === u.id).length,
+                circuits.filter((c: any) => c.user_id === u.id).length,
+                attempts.filter((a: any) => a.student_id === String(u.id) || a.student_name === u.full_name).length,
+                u.created_at || 'Recently'
+              ]);
+              downloadCSV(`quantum_course_study_report_${new Date().toISOString().split('T')[0]}.csv`, headers, rows);
+            }}
+            className="px-4 py-2 rounded-xl bg-white text-blue-700 font-bold text-xs shadow-md hover:bg-blue-50 transition-all flex items-center space-x-2 cursor-pointer"
+            title="Download Real-Time Course CSV Report"
+          >
             <FileSpreadsheet className="w-4 h-4 text-blue-700" />
             <span>Export CSV Report</span>
           </button>
@@ -325,8 +396,12 @@ export const InstructorDashboard: React.FC = () => {
 
       {/* Selected Test Attempt Modal Inspector */}
       {selectedTestAttempt && (
-        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 text-white rounded-3xl shadow-2xl border border-slate-800 max-w-3xl w-full max-h-[85vh] flex flex-col overflow-hidden">
+        <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+          <div className={`bg-slate-900 text-white shadow-2xl border border-slate-800 flex flex-col overflow-hidden transition-all duration-200 ${
+            isModalExpanded 
+              ? 'fixed inset-0 w-screen h-screen rounded-none z-50' 
+              : 'w-[96vw] max-w-7xl max-h-[92vh] rounded-3xl'
+          }`}>
             <div className="p-5 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border-b border-slate-800 flex items-center justify-between">
               <div>
                 <span className="text-xs font-mono text-cyan-400 font-bold">TEACHER ATTEMPT INSPECTOR</span>
@@ -334,15 +409,24 @@ export const InstructorDashboard: React.FC = () => {
                   {selectedTestAttempt.student_name} - {selectedTestAttempt.module_title}
                 </h3>
               </div>
-              <button
-                onClick={() => setSelectedTestAttempt(null)}
-                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setIsModalExpanded(!isModalExpanded)}
+                  className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all cursor-pointer"
+                  title={isModalExpanded ? "Exit Fullscreen Modal" : "Expand Fullscreen"}
+                >
+                  {isModalExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                </button>
+                <button
+                  onClick={() => { setSelectedTestAttempt(null); setIsModalExpanded(false); }}
+                  className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-all cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
-            <div className="p-6 overflow-y-auto space-y-6">
+            <div className="p-6 overflow-y-auto space-y-6 flex-1">
               <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between">
                 <div>
                   <div className="text-xs text-slate-400">Total Score</div>
@@ -377,8 +461,12 @@ export const InstructorDashboard: React.FC = () => {
 
       {/* Teacher Student Study Inspection Modal */}
       {isModalOpen && selectedStudentStudy && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-3xl w-full overflow-hidden flex flex-col max-h-[85vh]">
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+          <div className={`bg-white shadow-2xl border border-slate-200 overflow-hidden flex flex-col transition-all duration-200 ${
+            isModalExpanded 
+              ? 'fixed inset-0 w-screen h-screen rounded-none z-50' 
+              : 'w-[96vw] max-w-7xl max-h-[92vh] rounded-2xl'
+          }`}>
             {/* Modal Header */}
             <div className="p-5 bg-gradient-to-r from-slate-900 to-indigo-950 text-white flex items-center justify-between">
               <div className="flex items-center space-x-3">
@@ -395,12 +483,21 @@ export const InstructorDashboard: React.FC = () => {
                 </div>
               </div>
 
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-all"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setIsModalExpanded(!isModalExpanded)}
+                  className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-all cursor-pointer"
+                  title={isModalExpanded ? "Exit Fullscreen Modal" : "Expand Fullscreen"}
+                >
+                  {isModalExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                </button>
+                <button
+                  onClick={() => { setIsModalOpen(false); setIsModalExpanded(false); }}
+                  className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-all cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* Modal Body */}
@@ -541,6 +638,15 @@ export const InstructorDashboard: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* CSV Import & Export Modal (Pure White Background, Non-Neon) */}
+      <CSVDataModal
+        isOpen={isCSVModalOpen}
+        onClose={() => setIsCSVModalOpen(false)}
+        onDataImported={loadData}
+        dbData={dbData}
+        moduleTestResults={moduleTestResults}
+      />
     </div>
   );
 };
