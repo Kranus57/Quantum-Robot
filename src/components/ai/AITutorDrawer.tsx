@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useQuantum } from '../../context/QuantumContext';
 import { aiVoiceEngine } from '../../utils/aiVoiceEngine';
 import { 
@@ -15,17 +15,10 @@ import {
   Copy, 
   MessageSquare, 
   RotateCcw,
-  Bot
+  Bot,
+  User as UserIcon,
+  Trash2
 } from 'lucide-react';
-
-const SUGGESTED_QUERIES = [
-  "How does the Hadamard gate create superposition?",
-  "Why does CNOT entangle two qubits?",
-  "Explain my current circuit gates and statevector",
-  "How does Grover's search achieve quadratic speedup?",
-  "What is the difference between Bell states?",
-  "Why does measurement cause wavefunction collapse?"
-];
 
 export const AITutorDrawer: React.FC = () => {
   const { 
@@ -33,7 +26,8 @@ export const AITutorDrawer: React.FC = () => {
     setAiDrawerOpen, 
     aiTab, 
     setAiTab,
-    aiExplanation, 
+    tutorMessages,
+    clearTutorChat,
     aiDebugResult, 
     aiOptimizationResult, 
     isAiLoading,
@@ -46,10 +40,17 @@ export const AITutorDrawer: React.FC = () => {
   } = useQuantum();
 
   const [userQuery, setUserQuery] = useState<string>('');
-  const [copied, setCopied] = useState<boolean>(false);
+  const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null);
   const [codeCopied, setCodeCopied] = useState<boolean>(false);
   const [appliedOptimization, setAppliedOptimization] = useState<boolean>(false);
-  const [activeQueryTitle, setActiveQueryTitle] = useState<string>('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to newest message in chat
+  useEffect(() => {
+    if (aiTab === 'explain') {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [tutorMessages, isAiLoading, aiTab]);
 
   if (!aiDrawerOpen) return null;
 
@@ -58,70 +59,192 @@ export const AITutorDrawer: React.FC = () => {
     const query = userQuery.trim();
     if (!query || isAiLoading) return;
 
-    setActiveQueryTitle(query);
     setUserQuery('');
     await runAiExplain(query);
   };
 
-  const handleQuickPrompt = async (prompt: string) => {
-    setActiveQueryTitle(prompt);
-    await runAiExplain(prompt);
-  };
-
-  const handleCopyExplanation = () => {
-    if (!aiExplanation) return;
-    navigator.clipboard.writeText(aiExplanation);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopyMessage = (id: string, text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedMsgId(id);
+    setTimeout(() => setCopiedMsgId(null), 2000);
   };
 
   const handleCopyCode = () => {
-    if (!aiDebugResult?.correctedCode) return;
-    navigator.clipboard.writeText(aiDebugResult.correctedCode);
+    const code = aiDebugResult?.correctedCode || '';
+    if (!code) return;
+    navigator.clipboard.writeText(code);
     setCodeCopied(true);
     setTimeout(() => setCodeCopied(false), 2000);
   };
 
   const handleApplyOptimization = () => {
-    applyOptimizationToCircuit();
-    setAppliedOptimization(true);
-    setTimeout(() => setAppliedOptimization(false), 2500);
+    if (applyOptimizationToCircuit) {
+      applyOptimizationToCircuit();
+      setAppliedOptimization(true);
+      setTimeout(() => setAppliedOptimization(false), 3000);
+    }
   };
 
-  const handleSpeakExplanation = () => {
-    if (!aiExplanation) return;
-    aiVoiceEngine.speak(aiExplanation);
+  const handleSpeakMessage = (text: string) => {
+    const cleanSpeech = text
+      .replace(/###/g, '')
+      .replace(/####/g, '')
+      .replace(/\*\*/g, '')
+      .replace(/```[a-z]*[\s\S]*?```/g, 'Code block omitted.')
+      .replace(/\$\$[\s\S]*?\$\$/g, 'Mathematical equation.');
+    aiVoiceEngine.speak(cleanSpeech);
+  };
+
+  const renderInline = (str: string): React.ReactNode => {
+    const parts = str.split(/(`[^`]+`|\*\*[^*]+\*\*|\$[^$]+\$)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith('`') && part.endsWith('`') && part.length > 2) {
+        return (
+          <code key={i} className="px-1.5 py-0.5 rounded bg-slate-100 font-mono text-[10px] text-indigo-700 font-semibold border border-slate-200">
+            {part.slice(1, -1)}
+          </code>
+        );
+      }
+      if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
+        return (
+          <strong key={i} className="font-bold text-slate-900">
+            {part.slice(2, -2)}
+          </strong>
+        );
+      }
+      if (part.startsWith('$') && part.endsWith('$') && part.length > 2) {
+        return (
+          <span key={i} className="font-mono text-cyan-800 font-medium bg-cyan-50/80 px-1 py-0.5 rounded border border-cyan-200 text-[10px]">
+            {part.slice(1, -1)}
+          </span>
+        );
+      }
+      return part;
+    });
+  };
+
+  const renderFormattedMarkdown = (content: string) => {
+    return content.split('\n\n').map((paragraph, idx) => {
+      const trimmed = paragraph.trim();
+      if (!trimmed) return null;
+
+      if (trimmed.startsWith('# ') || trimmed.startsWith('## ')) {
+        return (
+          <h2 key={idx} className="text-xs font-bold text-slate-900 pt-2 pb-1 border-b border-slate-100 flex items-center space-x-1.5">
+            <span className="text-blue-600">■</span>
+            <span>{trimmed.replace(/^#{1,2}\s+/, '')}</span>
+          </h2>
+        );
+      }
+      if (trimmed.startsWith('### ')) {
+        return (
+          <h3 key={idx} className="text-xs font-bold text-slate-900 pt-1.5 border-t border-slate-100 first:border-0 first:pt-0 flex items-center space-x-1.5">
+            <span className="text-blue-500">◆</span>
+            <span>{trimmed.replace(/^###\s+/, '')}</span>
+          </h3>
+        );
+      }
+      if (trimmed.startsWith('#### ')) {
+        return (
+          <h4 key={idx} className="text-[11px] font-bold text-indigo-900 pt-1 flex items-center space-x-1">
+            <span className="text-indigo-500">▶</span>
+            <span>{trimmed.replace(/^####\s+/, '')}</span>
+          </h4>
+        );
+      }
+      if (trimmed.startsWith('```')) {
+        const codeContent = trimmed.replace(/```[a-z]*\n?/g, '').replace(/```/g, '').trim();
+        return (
+          <div key={idx} className="my-2 rounded-lg bg-slate-900 p-2.5 shadow-inner border border-slate-800">
+            <pre className="text-emerald-300 font-mono text-[10px] overflow-x-auto leading-relaxed">
+              {codeContent}
+            </pre>
+          </div>
+        );
+      }
+      if (trimmed.includes('$$')) {
+        return (
+          <div key={idx} className="my-1.5 p-2 rounded bg-slate-900 text-cyan-300 font-mono text-center text-[11px] overflow-x-auto shadow-inner border border-slate-800">
+            {trimmed.replace(/\$\$/g, '').trim()}
+          </div>
+        );
+      }
+      if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+        const items = trimmed.split('\n');
+        return (
+          <ul key={idx} className="space-y-1.5 pl-1 text-[11px]">
+            {items.map((item, itemIdx) => (
+              <li key={itemIdx} className="flex items-start space-x-2 text-slate-700 leading-relaxed">
+                <span className="text-blue-500 font-bold text-xs leading-none mt-1">•</span>
+                <span className="flex-1">{renderInline(item.replace(/^[-*]\s+/, ''))}</span>
+              </li>
+            ))}
+          </ul>
+        );
+      }
+      if (/^\d+\.\s/.test(trimmed)) {
+        const items = trimmed.split('\n');
+        return (
+          <ol key={idx} className="space-y-1.5 pl-1 text-[11px]">
+            {items.map((item, itemIdx) => {
+              const numMatch = item.match(/^(\d+)\.\s+(.*)$/);
+              return (
+                <li key={itemIdx} className="flex items-start space-x-2 text-slate-700 leading-relaxed">
+                  <span className="w-4 h-4 rounded-full bg-blue-50 text-blue-600 font-bold text-[9px] flex items-center justify-center flex-shrink-0 mt-0.5 border border-blue-200">
+                    {numMatch ? numMatch[1] : itemIdx + 1}
+                  </span>
+                  <span className="flex-1">{renderInline(numMatch ? numMatch[2] : item)}</span>
+                </li>
+              );
+            })}
+          </ol>
+        );
+      }
+      return <p key={idx} className="text-[11px] text-slate-700 leading-relaxed">{renderInline(trimmed)}</p>;
+    });
   };
 
   return (
-    <div className="fixed inset-y-0 right-0 w-[440px] bg-white border-l border-slate-200 shadow-2xl z-50 flex flex-col backdrop-blur-xl animate-in slide-in-from-right duration-200 font-sans">
+    <div className="fixed inset-y-0 right-0 w-[450px] bg-white border-l border-slate-200 shadow-2xl z-50 flex flex-col backdrop-blur-xl animate-in slide-in-from-right duration-200 font-sans">
       
       {/* Drawer Header */}
-      <div className="p-4 bg-white border-b border-slate-200 flex items-center justify-between shadow-xs">
+      <div className="p-3.5 bg-white border-b border-slate-200 flex items-center justify-between shadow-xs">
         <div className="flex items-center space-x-2.5">
-          <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center shadow-xs">
             <Bot className="w-4 h-4 text-blue-600" />
           </div>
           <div>
-            <h3 className="font-bold text-sm text-slate-900">Tutor</h3>
-            <p className="text-[11px] text-blue-600 font-medium">Neural Physics & Q&A Engine Active</p>
+            <h3 className="font-bold text-sm text-slate-900">Stark Sensei</h3>
+            <p className="text-[10px] text-blue-600 font-medium">Universal AI Tutor & Q&A Assistant</p>
           </div>
         </div>
-        <button
-          onClick={() => setAiDrawerOpen(false)}
-          className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-        >
-          <X className="w-5 h-5" />
-        </button>
+
+        <div className="flex items-center space-x-1.5">
+          {aiTab === 'explain' && tutorMessages.length > 1 && (
+            <button
+              onClick={clearTutorChat}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer flex items-center space-x-1 text-[11px]"
+              title="Reset Chat Session"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline text-[10px] font-semibold">Clear</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => setAiDrawerOpen(false)}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+            title="Close Drawer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
-      {/* Feature Selector Tabs: Tutor & Connected Optimize & Debug */}
+      {/* Feature Selector Tabs */}
       <div className="p-2 bg-slate-50 border-b border-slate-200 flex space-x-1">
         <button
-          onClick={() => {
-            setAiTab('explain');
-            if (!aiExplanation) runAiExplain();
-          }}
+          onClick={() => setAiTab('explain')}
           className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center space-x-1.5 transition-all cursor-pointer ${
             aiTab === 'explain'
               ? 'bg-white text-blue-600 border border-slate-200 shadow-xs font-bold'
@@ -129,7 +252,7 @@ export const AITutorDrawer: React.FC = () => {
           }`}
         >
           <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-          <span>Tutor</span>
+          <span>Tutor Chat</span>
         </button>
 
         <button
@@ -146,185 +269,82 @@ export const AITutorDrawer: React.FC = () => {
       </div>
 
       {/* Drawer Body Content */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50">
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/50">
 
-        {/* SECTION 1: INTERACTIVE EXPLAINER WITH USER QUERY INPUT */}
+        {/* SECTION 1: CONVERSATIONAL MULTI-TURN CHAT */}
         {aiTab === 'explain' && (
-          <div className="space-y-4">
-            
-            {/* User Query Input Form */}
-            <div className="p-3.5 rounded-xl bg-white border border-slate-200 shadow-xs space-y-2.5">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-slate-800 flex items-center space-x-1.5">
-                  <MessageSquare className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Ask AI Tutor Any Question:</span>
-                </label>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 font-bold uppercase">
-                  {userBackground} Track
-                </span>
-              </div>
-
-              <form onSubmit={handleSendQuery} className="space-y-2">
-                <div className="relative">
-                  <textarea
-                    value={userQuery}
-                    onChange={(e) => setUserQuery(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendQuery();
-                      }
-                    }}
-                    rows={3}
-                    placeholder="Ask about quantum circuits, gates, entanglement, mathematics, or physics (e.g., 'Why does CNOT create entanglement?')..."
-                    className="w-full text-xs p-3 pr-10 rounded-xl bg-slate-50 border border-slate-300 focus:outline-none focus:border-blue-500 focus:bg-white text-slate-900 leading-relaxed shadow-inner resize-none transition-all"
-                  />
-                  <button
-                    type="submit"
-                    disabled={!userQuery.trim() || isAiLoading}
-                    className="absolute bottom-3 right-3 p-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-30 text-white transition-all shadow-xs cursor-pointer"
-                    title="Process Query with AI Tutor"
-                  >
-                    <Send className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                <div className="flex items-center justify-between text-[11px] text-slate-500 font-medium pt-0.5">
-                  <span>Press <kbd className="px-1 py-0.5 rounded bg-slate-200 text-slate-700 text-[10px] font-mono">Enter</kbd> to submit</span>
-                  <span>Active Circuit: {gates.length} gates, {qubitCount} qubits</span>
-                </div>
-              </form>
-
-              {/* Quick Prompt Suggestions */}
-              <div className="pt-2 border-t border-slate-100 space-y-1.5">
-                <span className="text-[11px] font-semibold text-slate-600 block">Suggested Quick Topics:</span>
-                <div className="flex flex-wrap gap-1.5">
-                  {SUGGESTED_QUERIES.map((prompt, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => handleQuickPrompt(prompt)}
-                      disabled={isAiLoading}
-                      className="text-[10px] px-2 py-1 rounded-md bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 border border-slate-200 transition-all cursor-pointer text-left"
-                    >
-                      {prompt}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* AI Explanation Output Area */}
-            {isAiLoading ? (
-              <div className="p-8 rounded-xl bg-white border border-slate-200 flex flex-col items-center justify-center space-y-3 shadow-xs">
-                <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
-                <span className="text-xs font-mono font-medium text-slate-600">
-                  AI Quantum Engine processing query & analyzing circuit matrix...
-                </span>
-              </div>
-            ) : aiExplanation ? (
-              <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-xs space-y-3">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-                  <div className="flex items-center space-x-1.5 font-bold text-blue-700 text-xs">
-                    <Sparkles className="w-4 h-4 text-blue-600" />
-                    <span>AI Quantum Explanation Output</span>
+          <div className="space-y-3">
+            {tutorMessages.map((msg) => (
+              <div 
+                key={msg.id}
+                className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
+              >
+                {msg.role === 'user' ? (
+                  // User Message Bubble
+                  <div className="max-w-[85%] rounded-2xl rounded-tr-xs bg-blue-600 text-white p-3 shadow-sm space-y-1">
+                    <div className="flex items-center justify-between text-[10px] text-blue-100 font-semibold space-x-2">
+                      <span className="flex items-center space-x-1">
+                        <UserIcon className="w-3 h-3" />
+                        <span>You ({userBackground.toUpperCase()})</span>
+                      </span>
+                      <span>{msg.timestamp}</span>
+                    </div>
+                    <p className="text-xs font-medium leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                   </div>
+                ) : (
+                  // Tutor Message Card
+                  <div className="max-w-[95%] rounded-2xl rounded-tl-xs bg-white border border-slate-200 p-3.5 shadow-xs space-y-2">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
+                      <div className="flex items-center space-x-1.5">
+                        <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center">
+                          <Bot className="w-3 h-3" />
+                        </div>
+                        <span className="text-[11px] font-bold text-slate-800">Stark Sensei</span>
+                        <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-bold uppercase">
+                          AI Tutor
+                        </span>
+                      </div>
 
-                  <div className="flex items-center space-x-1">
-                    <button
-                      onClick={handleSpeakExplanation}
-                      className="flex items-center space-x-1 px-2 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold transition-all cursor-pointer"
-                      title="Read Explanation Aloud"
-                    >
-                      <Volume2 className="w-3.5 h-3.5 text-blue-600" />
-                      <span>Listen</span>
-                    </button>
+                      <div className="flex items-center space-x-1">
+                        <span className="text-[10px] text-slate-400 font-mono mr-1">{msg.timestamp}</span>
+                        <button
+                          onClick={() => handleSpeakMessage(msg.content)}
+                          className="p-1 rounded text-slate-400 hover:text-blue-600 hover:bg-slate-100 transition-all cursor-pointer"
+                          title="Listen to message"
+                        >
+                          <Volume2 className="w-3 h-3" />
+                        </button>
+                        <button
+                          onClick={() => handleCopyMessage(msg.id, msg.content)}
+                          className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all cursor-pointer"
+                          title="Copy message"
+                        >
+                          {copiedMsgId === msg.id ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3 text-slate-400" />}
+                        </button>
+                      </div>
+                    </div>
 
-                    <button
-                      onClick={handleCopyExplanation}
-                      className="flex items-center space-x-1 px-2 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold transition-all cursor-pointer"
-                      title="Copy Explanation to Clipboard"
-                    >
-                      {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-600" />}
-                      <span>{copied ? 'Copied' : 'Copy'}</span>
-                    </button>
-                  </div>
-                </div>
-
-                {activeQueryTitle && (
-                  <div className="text-xs font-bold text-slate-900 bg-slate-50 p-2 rounded-lg border border-slate-200">
-                    Query: <span className="text-blue-700">"{activeQueryTitle}"</span>
+                    <div className="space-y-2">
+                      {renderFormattedMarkdown(msg.content)}
+                    </div>
                   </div>
                 )}
+              </div>
+            ))}
 
-                {/* Formatted Markdown/Code content */}
-                <div className="text-xs text-slate-700 leading-relaxed space-y-3">
-                  {aiExplanation.split('\n\n').map((paragraph, idx) => {
-                    const trimmed = paragraph.trim();
-                    if (trimmed.startsWith('### ')) {
-                      return (
-                        <h3 key={idx} className="text-sm font-black text-slate-900 pt-2 border-t border-slate-100 first:border-0 first:pt-0 flex items-center space-x-1.5">
-                          <span className="text-blue-600">■</span>
-                          <span>{trimmed.replace('### ', '')}</span>
-                        </h3>
-                      );
-                    }
-                    if (trimmed.startsWith('#### ')) {
-                      return (
-                        <h4 key={idx} className="text-xs font-bold text-indigo-900 pt-1 flex items-center space-x-1">
-                          <span className="text-indigo-500">▶</span>
-                          <span>{trimmed.replace('#### ', '')}</span>
-                        </h4>
-                      );
-                    }
-                    if (trimmed.startsWith('```')) {
-                      const codeContent = trimmed.replace(/```[a-z]*\n?/g, '').replace(/```/g, '').trim();
-                      return (
-                        <div key={idx} className="space-y-1 my-2">
-                          <div className="flex items-center justify-between text-[10px] font-mono font-semibold text-slate-500 px-1">
-                            <span>Qiskit Python Simulation</span>
-                            <span>Executable</span>
-                          </div>
-                          <pre className="p-3 rounded-lg bg-slate-900 text-emerald-300 font-mono text-[11px] overflow-x-auto shadow-inner border border-slate-800 leading-relaxed">
-                            {codeContent}
-                          </pre>
-                        </div>
-                      );
-                    }
-                    if (trimmed.includes('$$')) {
-                      return (
-                        <div key={idx} className="space-y-1.5">
-                          {trimmed.split('$$').map((part, pIdx) => {
-                            if (pIdx % 2 === 1) {
-                              return (
-                                <div key={pIdx} className="my-2 p-2.5 rounded-lg bg-slate-900 text-cyan-300 font-mono text-center text-xs overflow-x-auto shadow-inner border border-slate-800">
-                                  {part.trim()}
-                                </div>
-                              );
-                            }
-                            return part.trim() ? <p key={pIdx} className="leading-relaxed">{part.trim()}</p> : null;
-                          })}
-                        </div>
-                      );
-                    }
-                    if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-                      const items = trimmed.split('\n');
-                      return (
-                        <ul key={idx} className="space-y-1 pl-2">
-                          {items.map((item, itemIdx) => (
-                            <li key={itemIdx} className="flex items-start space-x-2 text-slate-700">
-                              <span className="text-blue-500 text-sm leading-none">•</span>
-                              <span className="leading-relaxed">{item.replace(/^[-*]\s+/, '')}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      );
-                    }
-                    return <p key={idx} className="leading-relaxed">{trimmed}</p>;
-                  })}
+            {/* AI Loading State Typing Indicator */}
+            {isAiLoading && (
+              <div className="flex items-start max-w-[90%]">
+                <div className="rounded-2xl rounded-tl-xs bg-white border border-slate-200 p-3 shadow-xs flex items-center space-x-2">
+                  <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+                  <span className="text-xs font-mono text-slate-600">
+                    Stark Sensei is thinking and formulating response...
+                  </span>
                 </div>
               </div>
-            ) : null}
+            )}
 
+            <div ref={messagesEndRef} />
           </div>
         )}
 
@@ -513,14 +533,48 @@ export const AITutorDrawer: React.FC = () => {
 
       </div>
 
+      {/* Sticky Interactive Input Footer for Chat */}
+      {aiTab === 'explain' && (
+        <div className="p-3 bg-white border-t border-slate-200 shadow-md space-y-2">
+          <form onSubmit={handleSendQuery} className="relative flex items-center">
+            <textarea
+              value={userQuery}
+              onChange={(e) => setUserQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendQuery();
+                }
+              }}
+              rows={2}
+              placeholder="Ask Stark Sensei anything (e.g. 'Explain superposition with a real-life example', quantum gates, Python)..."
+              className="w-full text-xs p-2.5 pr-12 rounded-xl bg-slate-50 border border-slate-300 focus:outline-none focus:border-blue-500 focus:bg-white text-slate-900 leading-relaxed resize-none shadow-inner transition-all"
+            />
+            <button
+              type="submit"
+              disabled={!userQuery.trim() || isAiLoading}
+              className="absolute right-2.5 p-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-30 text-white transition-all shadow-xs cursor-pointer"
+              title="Send to Stark Sensei"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          </form>
+
+          <div className="flex items-center justify-between text-[10px] text-slate-400">
+            <span>Press <kbd className="px-1 py-0.2 rounded bg-slate-100 border border-slate-200 text-slate-600 font-mono">Enter</kbd> to send</span>
+            <span>Circuit: {gates.length} gates, {qubitCount} qubits</span>
+          </div>
+        </div>
+      )}
+
       {/* Drawer Footer */}
-      <div className="p-4 bg-white border-t border-slate-200 flex items-center justify-between text-xs">
-        <span className="text-slate-500 font-medium">Neural AI Reasoning Engine Active</span>
+      <div className="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs">
+        <span className="text-slate-500 font-medium text-[11px]">Neural AI Reasoning Engine Active</span>
         <button
           onClick={() => setAiDrawerOpen(false)}
-          className="px-3 py-1.5 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200 shadow-xs cursor-pointer font-semibold"
+          className="px-3 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 shadow-xs cursor-pointer font-semibold text-xs"
         >
-          Close Drawer
+          Close
         </button>
       </div>
 

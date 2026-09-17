@@ -21,6 +21,7 @@ class AIExplainRequestSchema(BaseModel):
     query: Optional[str] = None
     userBackground: Optional[str] = "cs-undergrad"
     circuit: Optional[CircuitRequestSchema] = None
+    messages: Optional[List[Dict[str, str]]] = None
 
 class AIDebugRequestSchema(BaseModel):
     qubitCount: int

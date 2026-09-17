@@ -88,7 +88,7 @@ def health_check():
         "service": "QuantumEdu AI Engine v3.0",
         "database": "PostgreSQL / SQLite SQLAlchemy ORM Active",
         "supported_frameworks": ["qiskit", "cirq", "pennylane", "native"],
-        "multiplayer_ws": "ws://localhost:8000/ws/collaborate/{session_id}"
+        "multiplayer_ws": "ws://localhost:8001/ws/collaborate/{session_id}"
     }
 
 @app.get("/api/db/health")
@@ -384,7 +384,8 @@ def ai_explain(req: AIExplainRequestSchema):
         concept=req.concept,
         query=req.query,
         user_background=req.userBackground or "cs-undergrad",
-        circuit_info=circuit_info
+        circuit_info=circuit_info,
+        messages=req.messages
     )
     return {"explanation": explanation}
 

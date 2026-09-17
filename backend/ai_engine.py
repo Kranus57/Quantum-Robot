@@ -1,114 +1,332 @@
 import os
 from typing import Dict, Any, List
 
+try:
+    from dotenv import load_dotenv
+    _root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    _root_env = os.path.join(_root_dir, ".env")
+    if os.path.exists(_root_env):
+        load_dotenv(_root_env)
+    else:
+        load_dotenv()
+except Exception:
+    pass
+
 class AIEngine:
     """
     AI Intelligent Tutoring System (ITS) Engine.
     Orchestrates LLM prompts (OpenAI / Anthropic API compatible) and provides local rule-based fallback diagnostics.
     """
     @staticmethod
-    def explain_concept(concept: str = None, query: str = None, user_background: str = "cs-undergrad", circuit_info: Dict[str, Any] = None) -> str:
+    def explain_concept(concept: str = None, query: str = None, user_background: str = "cs-undergrad", circuit_info: Dict[str, Any] = None, messages: List[Dict[str, str]] = None) -> str:
         """
-        Processes user query or concept using AI.
-        Attempts LLM completion via OpenRouter API with fast models; otherwise invokes
-        smart fallback reasoning engine capable of answering basic and complex queries.
+        Processes any user query or concept using a resilient multi-provider AI tutoring pipeline.
+        Attempts completion via:
+          1. Groq Cloud (Free high-speed LLaMA 3.3 70B)
+          2. Google Gemini API
+          3. OpenAI / OpenRouter API
+          4. Local Ollama (http://localhost:11434)
+          5. High-intelligence offline reasoning engine for math, code, science, and quantum theory.
         """
+        import json
+        import urllib.request
+        import urllib.error
+        import re
+        import math
+
         user_prompt = (query or concept or "Quantum Computing Dynamics").strip()
         bg_level = (user_background or "cs-undergrad").lower()
-        
-        # 1. Attempt LLM API call if OPENAI_API_KEY is configured
-        api_key = os.environ.get("OPENAI_API_KEY")
+
+        def _clean_response(text: str) -> str:
+            if not text:
+                return ""
+            # Strip any trailing quiz, test questions, or comprehension checks section
+            pattern = r'(?i)(?:\n\s*(?:#{1,6}\s*|\*{1,2}\s*)(?:test\s+(?:your\s+)?(?:knowledge|understanding|yourself|skills?)|quiz|practice\s+(?:questions?|problems?|exercises?)|self[\s-]check|comprehension\s+check|check\s+your\s+understanding|quick\s+quiz|challenge\s+questions?|questions\s+to\s+test\s+yourself|test\s+questions?)[\s\S]*$)'
+            cleaned = re.sub(pattern, '', text).rstrip()
+            cleaned = re.sub(r'\n\s*---+\s*$', '', cleaned).rstrip()
+            return cleaned
+
+        # Build dynamic system instruction
+        system_prompt = (
+            "You are Stark Sensei, a warm, brilliant, and human-like AI mentor and tutor. "
+            "Your superpower is turning intimidating science, math, and quantum physics into fun, clear, and unforgettable concepts.\n\n"
+            "CRITICAL INSTRUCTIONS FOR TEACHING WITH REAL-LIFE EXAMPLES:\n"
+            "1. REAL-LIFE EXAMPLES FIRST (MANDATORY): Always anchor your explanation in a vivid, relatable everyday real-life analogy (e.g., spinning coins, traffic roundabouts, light switches, radio dials, musical harmony, mixing paint colors, a library indexing system). Help the student visualize the physical intuition immediately before introducing any technical terms.\n"
+            "2. CONVERSATIONAL & ENGAGING: Talk like an encouraging personal mentor having a fun, friendly conversation over coffee. Never lecture like a dry, robotic textbook.\n"
+            "3. CONCISE & DIGESTIBLE: Keep explanations punchy and focused (typically 200–350 words). Avoid overwhelming the student with giant walls of text.\n"
+            "4. CLEAN STRUCTURE & FORMATTING:\n"
+            "   - 🌍 **Real-Life Picture**: The everyday analogy that clicks instantly.\n"
+            "   - 💡 **How It Works**: The simple concept explained clearly.\n"
+            "   - 🔬 **The Quantum / Code Connection**: A concise formula ($...$) or short runnable code block.\n"
+            "   - ✨ **Quick Takeaway**: A friendly concluding summary.\n"
+            "5. STRICTLY NO TEST QUESTIONS: NEVER ask or append test questions, quizzes, comprehension checks, exercises, or practice problems at the end or bottom of your response. Simply finish with a warm, encouraging closing takeaway.\n"
+            f"6. STUDENT BACKGROUND: The student's level is '{bg_level}'. Match their level naturally without talking down to them."
+        )
+
+        circuit_context = ""
+        if circuit_info and circuit_info.get("gates"):
+            circuit_context = (
+                f"\n\n[Active Student Circuit: {len(circuit_info.get('gates', []))} gates, "
+                f"{circuit_info.get('qubitCount', 2)} qubits, Framework: {circuit_info.get('framework', 'qiskit')}]."
+            )
+
+        # Build message history
+        conversation: List[Dict[str, str]] = [{"role": "system", "content": system_prompt}]
+        if messages and isinstance(messages, list):
+            for m in messages[-6:]:
+                if isinstance(m, dict) and "role" in m and "content" in m:
+                    r = "assistant" if m["role"] in ["assistant", "tutor", "bot"] else "user"
+                    conversation.append({"role": r, "content": str(m["content"])})
+            if not conversation or conversation[-1].get("content") != f"{user_prompt}{circuit_context}":
+                conversation.append({"role": "user", "content": f"{user_prompt}{circuit_context}"})
+        else:
+            conversation.append({"role": "user", "content": f"{user_prompt}{circuit_context}"})
+
+        def _call_chat_endpoint(endpoint: str, api_key: str, model_name: str, extra_headers: Dict[str, str] = None, timeout: int = 7) -> str:
+            payload = {
+                "model": model_name,
+                "messages": conversation,
+                "temperature": 0.7,
+                "max_tokens": 900
+            }
+            headers = {
+                "Content-Type": "application/json",
+                "User-Agent": "Stark-Sensei-AI-Tutor/2.0"
+            }
+            if api_key:
+                headers["Authorization"] = f"Bearer {api_key}"
+            if extra_headers:
+                headers.update(extra_headers)
+
+            req = urllib.request.Request(
+                endpoint,
+                data=json.dumps(payload).encode("utf-8"),
+                headers=headers,
+                method="POST"
+            )
+            with urllib.request.urlopen(req, timeout=timeout) as response:
+                res_data = json.loads(response.read().decode("utf-8"))
+                choices = res_data.get("choices", [])
+                if choices and "message" in choices[0]:
+                    content = choices[0]["message"].get("content", "").strip()
+                    if content and len(content) >= 2:
+                        return _clean_response(content)
+            return None
+
+        # ----------------------------------------------------------------------
+        # PROVIDER 1: Google Gemini API (High-speed native generateContent REST API)
+        # ----------------------------------------------------------------------
+        gemini_key = os.environ.get("GEMINI_API_KEY")
+        if gemini_key and len(gemini_key) > 10 and not gemini_key.startswith("your_"):
+            gemini_contents = []
+            if messages and isinstance(messages, list):
+                for m in messages[-8:]:
+                    if isinstance(m, dict) and "content" in m:
+                        r = "model" if m.get("role") in ["assistant", "tutor", "bot", "model"] else "user"
+                        txt = str(m.get("content", "")).strip()
+                        if txt:
+                            gemini_contents.append({"role": r, "parts": [{"text": txt}]})
+            if not gemini_contents or gemini_contents[-1]["role"] != "user":
+                gemini_contents.append({"role": "user", "parts": [{"text": f"{user_prompt}{circuit_context}"}]})
+
+            gemini_payload = {
+                "system_instruction": {
+                    "parts": [{"text": system_prompt}]
+                },
+                "contents": gemini_contents,
+                "generationConfig": {
+                    "temperature": 0.7,
+                    "maxOutputTokens": 900
+                }
+            }
+            gemini_body = json.dumps(gemini_payload).encode("utf-8")
+
+            for m in ["gemini-flash-lite-latest", "gemini-3.1-flash-lite", "gemini-3.6-flash", "gemini-3.8-flash", "gemini-flash-latest"]:
+                try:
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent?key={gemini_key}"
+                    req = urllib.request.Request(
+                        url,
+                        data=gemini_body,
+                        headers={"Content-Type": "application/json"},
+                        method="POST"
+                    )
+                    with urllib.request.urlopen(req, timeout=6) as resp:
+                        res_data = json.loads(resp.read().decode("utf-8"))
+                        candidates = res_data.get("candidates", [])
+                        if candidates:
+                            parts = candidates[0].get("content", {}).get("parts", [])
+                            if parts and "text" in parts[0]:
+                                text_val = parts[0]["text"].strip()
+                                if len(text_val) >= 2:
+                                    return _clean_response(text_val)
+                except Exception:
+                    continue
+
+        # ----------------------------------------------------------------------
+        # PROVIDER 2: Groq Cloud API (Free, high-speed LLaMA 3.3 70B)
+        # ----------------------------------------------------------------------
+        groq_key = os.environ.get("GROQ_API_KEY")
+        if groq_key and len(groq_key) > 10 and not groq_key.startswith("your_"):
+            for m in ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "gemma2-9b-it"]:
+                try:
+                    res = _call_chat_endpoint("https://api.groq.com/openai/v1/chat/completions", groq_key, m, timeout=6)
+                    if res:
+                        return res
+                except Exception:
+                    continue
+
+        # ----------------------------------------------------------------------
+        # PROVIDER 3: OpenAI / OpenRouter API
+        # ----------------------------------------------------------------------
+        openai_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("OPENROUTER_API_KEY")
         base_url = os.environ.get("OPENAI_BASE_URL", "https://openrouter.ai")
-        
-        if api_key and len(api_key) > 10 and not api_key.startswith("your_"):
+        if openai_key and len(openai_key) > 10 and not openai_key.startswith("your_"):
+            is_openrouter = "openrouter" in base_url.lower() or openai_key.startswith("sk-or-")
+            endpoint = "https://openrouter.ai/api/v1/chat/completions" if is_openrouter else f"{base_url.rstrip('/')}/v1/chat/completions"
             candidate_models = [
                 "google/gemini-2.0-flash-lite-preview-02-05:free",
                 "meta-llama/llama-3.3-70b-instruct:free",
                 "deepseek/deepseek-r1:free",
                 "qwen/qwen-2.5-coder-32b-instruct:free",
                 "mistralai/mistral-7b-instruct:free",
-                "openchat/openchat-7b:free",
-                "nex-agi/nex-n2.5-mini:free",
                 "gpt-4o-mini",
                 "gpt-3.5-turbo"
-            ] if "openrouter" in base_url else ["gpt-4o-mini", "gpt-3.5-turbo"]
-            
-            import urllib.request
-            import json
-            
-            endpoint = f"{base_url.rstrip('/')}/api/v1/chat/completions" if "openrouter" in base_url else f"{base_url.rstrip('/')}/v1/chat/completions"
-            
-            system_prompt = (
-                f"You are Stark Sensei, an expert AI tutor, scientist, mathematician, and programmer. "
-                f"You can answer ANY question the student asks—including basic questions (e.g. greetings, simple math, definitions, programming, general science, logic), "
-                f"as well as advanced quantum mechanics, bra-ket linear algebra, circuit dynamics, and algorithms. "
-                f"Provide clear, accurate, friendly, and well-structured answers using Markdown formatting."
-            )
-            
-            circuit_context = ""
-            if circuit_info and circuit_info.get("gates"):
-                circuit_context = f"\n\nCurrent Student Circuit Context: {len(circuit_info.get('gates', []))} gates, {circuit_info.get('qubitCount', 2)} qubits."
-            
-            for model_name in candidate_models:
+            ] if is_openrouter else ["gpt-4o-mini", "gpt-3.5-turbo"]
+
+            extra_headers = {
+                "HTTP-Referer": "http://localhost:3000",
+                "X-Title": "Quantum Robot Stark Sensei"
+            } if is_openrouter else None
+
+            for m in candidate_models:
                 try:
-                    payload = {
-                        "model": model_name,
-                        "messages": [
-                            {"role": "system", "content": system_prompt},
-                            {"role": "user", "content": f"{user_prompt}{circuit_context}"}
-                        ],
-                        "temperature": 0.5,
-                        "max_tokens": 1200
-                    }
-                    
-                    req = urllib.request.Request(
-                        endpoint,
-                        data=json.dumps(payload).encode("utf-8"),
-                        headers={
-                            "Content-Type": "application/json",
-                            "Authorization": f"Bearer {api_key}",
-                            "User-Agent": "Stark-Sensei-AI-Tutor/1.0",
-                            "HTTP-Referer": "http://localhost:3000",
-                            "X-Title": "Quantum Robot Stark Sensei"
-                        },
-                        method="POST"
-                    )
-                    
-                    with urllib.request.urlopen(req, timeout=8) as response:
-                        res_data = json.loads(response.read().decode("utf-8"))
-                        choices = res_data.get("choices", [])
-                        if choices and "message" in choices[0]:
-                            content = choices[0]["message"].get("content", "").strip()
-                            if content and len(content) >= 2:
-                                return content
+                    res = _call_chat_endpoint(endpoint, openai_key, m, extra_headers=extra_headers, timeout=6)
+                    if res:
+                        return res
                 except Exception:
                     continue
 
-        # 2. Local Fallback Reasoning Engine for Basic & Quantum Questions
+        # ----------------------------------------------------------------------
+        # PROVIDER 4: Local Ollama (Completely Free & Offline, zero API key)
+        # ----------------------------------------------------------------------
+        ollama_base = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
+        for m in ["llama3.2", "llama3.1", "mistral", "phi3", "gemma2", "qwen2.5"]:
+            try:
+                res = _call_chat_endpoint(f"{ollama_base.rstrip('/')}/v1/chat/completions", "", m, timeout=3)
+                if res:
+                    return res
+            except Exception:
+                break
+
+        # ----------------------------------------------------------------------
+        # PROVIDER 5: High-Intelligence Offline Reasoning Fallback Engine
+        # ----------------------------------------------------------------------
         q_lower = user_prompt.lower().strip()
 
-        # Greetings
-        if q_lower in ["hi", "hello", "hey", "who are you", "what is your name", "stark sensei", "hi stark", "hello stark"]:
+        # 1. Greetings & Identity
+        if q_lower in ["hi", "hello", "hey", "who are you", "what is your name", "stark sensei", "hi stark", "hello stark", "help"]:
             return (
                 "### 👋 Hello! I am Stark Sensei\n\n"
-                "I am your personal AI tutor. Ask me **anything**!\n\n"
-                "- **Basic Questions**: Ask about simple concepts, math, definitions, or code.\n"
-                "- **Quantum Physics & Mathematics**: Superposition, entanglement, Dirac notation, matrix algebra, and circuit dynamics.\n"
-                "- **Coding & Algorithms**: Python, Qiskit, algorithm design, or debugging.\n\n"
-                "What would you like to ask or explore today?"
+                "I am your personal AI tutor. Ask me **any question**—from general science and coding to quantum physics!\n\n"
+                "- 🧮 **Math & Arithmetic**: Calculate expressions, matrix operations, eigenvalues, or calculus.\n"
+                "- 💻 **Programming & Code**: Ask for Python algorithms, data structures, Qiskit scripts, or debugging.\n"
+                "- 🔬 **Quantum Physics**: Learn about superposition, entanglement, phase kickback, quantum gates, and Shor/Grover algorithms.\n"
+                "- 🧠 **General Questions**: Ask about physics principles, computer science, and concepts.\n\n"
+                "What would you like to explore or solve today?"
             )
 
-        # Basic Arithmetic & Math Queries (e.g., 2+2, 10*5, 100/4)
-        if any(c in q_lower for c in ["+", "-", "*", "/"]) and any(c.isdigit() for c in q_lower):
+        # 2. Arithmetic & Mathematical Calculation Evaluator
+        if any(c in q_lower for c in ["+", "-", "*", "/", "%", "^", "sqrt", "sin", "cos", "tan", "pi", "factorial"]):
             try:
-                clean_expr = "".join(c for c in user_prompt if c in "0123456789+-*/.() ")
-                if clean_expr.strip():
-                    val = eval(clean_expr, {"__builtins__": {}})
-                    return f"### 🧮 Math Calculation\n\n**Question**: `{user_prompt}`\n\n**Result**: **{val}**"
+                calc_str = user_prompt
+                for w in ["calculate", "what is", "eval", "compute", "solve", "=", "?"]:
+                    calc_str = re.sub(re.escape(w), "", calc_str, flags=re.IGNORECASE)
+                calc_clean = calc_str.replace("^", "**").replace("×", "*").replace("÷", "/").strip()
+                safe_dict = {
+                    "sqrt": math.sqrt, "sin": math.sin, "cos": math.cos, "tan": math.tan,
+                    "pi": math.pi, "e": math.e, "log": math.log, "factorial": math.factorial,
+                    "pow": pow, "abs": abs
+                }
+                if any(ch.isdigit() for ch in calc_clean):
+                    val = eval(calc_clean, {"__builtins__": {}}, safe_dict)
+                    return (
+                        f"### 🧮 Math Calculation Result\n\n"
+                        f"**Expression:** `{calc_clean.strip()}`\n\n"
+                        f"**Result:** **`{val}`**\n\n"
+                        f"---\n"
+                        f"*Need step-by-step breakdown or another formula? Just ask!*"
+                    )
             except Exception:
                 pass
-        
-        # Topic 1: Phase Kickback & Quantum Oracles
+
+        # 3. Programming & Coding Inquiries (Python, JS, Algorithms)
+        if any(w in q_lower for w in ["python", "javascript", "code", "function", "binary search", "reverse list", "fibonacci", "sorting", "loop", "array", "recursion"]):
+            if "binary search" in q_lower:
+                return (
+                    "### 💻 Binary Search Algorithm (Python)\n\n"
+                    "Binary Search finds an item in a **sorted list** in $\\mathcal{O}(\\log n)$ time by dividing the search interval in half.\n\n"
+                    "```python\ndef binary_search(arr: list[int], target: int) -> int:\n"
+                    "    low, high = 0, len(arr) - 1\n"
+                    "    while low <= high:\n"
+                    "        mid = (low + high) // 2\n"
+                    "        if arr[mid] == target:\n"
+                    "            return mid  # Target index found\n"
+                    "        elif arr[mid] < target:\n"
+                    "            low = mid + 1\n"
+                    "        else:\n"
+                    "            high = mid - 1\n"
+                    "    return -1  # Not found\n\n"
+                    "# Example usage:\n"
+                    "numbers = [2, 4, 7, 10, 15, 23, 38, 56]\n"
+                    "print('Index of 23:', binary_search(numbers, 23))  # Output: 5\n```\n\n"
+                    "**Key Takeaway:** Unlike linear search $\\mathcal{O}(n)$, binary search cuts the search space in half each iteration."
+                )
+            elif "reverse" in q_lower and ("list" in q_lower or "string" in q_lower or "array" in q_lower):
+                return (
+                    "### 💻 Reversing Lists & Strings in Python\n\n"
+                    "Here are the most efficient ways to reverse a list or string in Python:\n\n"
+                    "#### 1. Using Slice Notation `[::-1]` (Fastest & Most Pythonic)\n"
+                    "```python\n# Reversing a list\nitems = [1, 2, 3, 4, 5]\nreversed_items = items[::-1]\nprint(reversed_items)  # [5, 4, 3, 2, 1]\n\n# Reversing a string\ntext = 'Quantum'\nprint(text[::-1])      # 'mutnauQ'\n```\n\n"
+                    "#### 2. In-Place Reversal (`list.reverse()`)\n"
+                    "```python\nitems = [10, 20, 30]\nitems.reverse()\nprint(items)  # [30, 20, 10]\n```\n\n"
+                    "#### 3. Two-Pointer Swap In-Place (Algorithm Concept)\n"
+                    "```python\ndef reverse_in_place(arr):\n    left, right = 0, len(arr) - 1\n    while left < right:\n        arr[left], arr[right] = arr[right], arr[left]\n        left += 1\n        right -= 1\n    return arr\n```"
+                )
+            elif "fibonacci" in q_lower:
+                return (
+                    "### 💻 Fibonacci Sequence Implementation\n\n"
+                    "Here is an efficient $\\mathcal{O}(n)$ iterative approach and a memoized dynamic programming solution:\n\n"
+                    "```python\n# Iterative O(n) Time, O(1) Space\ndef fibonacci(n: int) -> int:\n    if n <= 0: return 0\n    if n == 1: return 1\n    a, b = 0, 1\n    for _ in range(2, n + 1):\n        a, b = b, a + b\n    return b\n\nprint([fibonacci(i) for i in range(10)])\n# Output: [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]\n```"
+                )
+
+        # 4. Matrix & Linear Algebra Inquiries
+        if any(w in q_lower for w in ["eigenvalue", "eigenvector", "matrix multiplication", "pauli matrix", "inner product", "outer product", "tensor product", "hermitian", "unitary"]):
+            if "eigen" in q_lower:
+                return (
+                    "### 📐 Eigenvalues and Eigenvectors Explained\n\n"
+                    "An **eigenvector** $|v\\rangle$ of a linear transformation or matrix $A$ is a non-zero vector whose direction does not change when $A$ acts upon it—it is only scaled by a constant factor $\\lambda$:\n\n"
+                    "$$A |v\\rangle = \\lambda |v\\rangle$$\n\n"
+                    "- $\\lambda$ is the **eigenvalue** (a scalar).\n"
+                    "- $|v\\rangle$ is the **eigenvector** (or eigenstate in quantum mechanics).\n\n"
+                    "#### Quantum Computing Significance:\n"
+                    "1. Every quantum measurement observable is represented by a **Hermitian operator** ($H = H^\\dagger$).\n"
+                    "2. The only physical values you can observe from a measurement are the **real eigenvalues** of $H$.\n"
+                    "3. For example, for the Pauli-Z gate $Z = \\begin{pmatrix} 1 & 0 \\\\ 0 & -1 \\end{pmatrix}$:\n"
+                    "   - State $|0\\rangle = \\begin{pmatrix} 1 \\\\ 0 \\end{pmatrix}$ has eigenvalue **$+1$** ($Z|0\\rangle = +1|0\\rangle$).\n"
+                    "   - State $|1\\rangle = \\begin{pmatrix} 0 \\\\ 1 \\end{pmatrix}$ has eigenvalue **$-1$** ($Z|1\\rangle = -1|1\\rangle$)."
+                )
+            elif "pauli" in q_lower:
+                return (
+                    "### 🔬 The Pauli Matrices ($I, X, Y, Z$)\n\n"
+                    "The Pauli matrices form an orthogonal basis for all $2 \\times 2$ Hermitian matrices:\n\n"
+                    "$$I = \\begin{pmatrix} 1 & 0 \\\\ 0 & 1 \\end{pmatrix}, \\quad X = \\begin{pmatrix} 0 & 1 \\\\ 1 & 0 \\end{pmatrix}$$\n\n"
+                    "$$Y = \\begin{pmatrix} 0 & -i \\\\ i & 0 \\end{pmatrix}, \\quad Z = \\begin{pmatrix} 1 & 0 \\\\ 0 & -1 \\end{pmatrix}$$\n\n"
+                    "- **$X$ Gate (Bit-Flip):** Flips $|0\\rangle \\leftrightarrow |1\\rangle$.\n"
+                    "- **$Z$ Gate (Phase-Flip):** Flips phase of $|1\\rangle$ ($|1\\rangle \\to -|1\\rangle$).\n"
+                    "- **$Y$ Gate:** Combined bit-flip and phase-flip ($Y = iXZ$)."
+                )
+
+        # 5. Core Quantum Topics with Background Adaptation
         if any(w in q_lower for w in ["kickback", "phase kickback", "oracle", "deutsch", "bernstein", "simon"]):
             topic_title = "Quantum Phase Kickback & Oracle Mechanisms"
             high_school_text = (
@@ -155,64 +373,57 @@ class AIEngine:
 
         # Topic 2: Superposition & Hadamard Transform
         elif any(w in q_lower for w in ["superposition", "hadamard", "plus state", "minus state", "h gate"]):
-            topic_title = "Quantum Superposition & Hadamard Transform"
+            topic_title = "Quantum Superposition & The Hadamard Transform"
             high_school_text = (
-                "Think of a quantum coin. While spinning on a table, it is not simply heads or tails—it exists in a fluid blend of both states at once! "
-                "The **Hadamard (H) gate** is the kick that puts the coin into this spinning superposition. Only when you slap your hand down (measurement) "
-                "does the coin collapse into a definite heads (0) or tails (1) with 50/50 odds."
+                "Think of a quantum coin. While resting flat on a table, a coin is either definitively Heads or Tails. "
+                "While spinning in the air, however, it is in a dynamic blend of both possibilities simultaneously! "
+                "The **Hadamard Gate ($H$)** is the fundamental quantum 'spin' that puts a qubit into an equal 50/50 superposition of $|0\\rangle$ and $|1\\rangle$."
             )
             cs_text = (
-                r"A qubit $|\psi\rangle$ exists as a normalized unit vector in a 2-dimensional complex Hilbert space $\mathbb{C}^2$:" "\n\n"
-                r"$$|\psi\rangle = \alpha |0\rangle + \beta |1\rangle, \quad |\alpha|^2 + |\beta|^2 = 1, \quad \alpha, \beta \in \mathbb{C}$$" "\n\n"
-                r"The **Hadamard gate** is a Hermitian and unitary operator ($H = H^\dagger = H^{-1}$):" "\n\n"
-                r"$$H = \frac{1}{\sqrt{2}}\begin{pmatrix} 1 & 1 \\ 1 & -1 \end{pmatrix}$$" "\n\n"
-                r"Applying $H$ to basis states creates equal superpositions with constructive and destructive phase relationships:" "\n"
-                r"$$H|0\rangle = |+\rangle = \frac{1}{\sqrt{2}}(|0\rangle + |1\rangle), \qquad H|1\rangle = |-\rangle = \frac{1}{\sqrt{2}}(|0\rangle - |1\rangle)$$" "\n\n"
-                r"For an $n$-qubit register initialized to $|0\rangle^{\otimes n}$, applying $H^{\otimes n}$ generates a uniform superposition over all $2^n$ computational states simultaneously."
+                "A classical bit stores either 0 or 1. A qubit state $|\\psi\\rangle$ exists in a 2D complex vector space $\\mathbb{C}^2$:\n\n"
+                "$$|\\psi\\rangle = \\alpha|0\\rangle + \\beta|1\\rangle, \\quad |\\alpha|^2 + |\\beta|^2 = 1$$\n\n"
+                "The Hadamard matrix acts as a discrete Fourier transform on 1 qubit:\n\n"
+                "$$H = \\frac{1}{\\sqrt{2}}\\begin{pmatrix} 1 & 1 \\\\ 1 & -1 \\end{pmatrix}$$\n\n"
+                "Applying $H$ to ground state $|0\\rangle$ yields $|+\\rangle = \\frac{|0\\rangle + |1\\rangle}{\\sqrt{2}}$. "
+                "This enables parallel exploration of exponential state spaces."
             )
             phd_text = (
-                r"Geometrically on the Bloch sphere, the Hadamard operator represents an involutory $\pi$-rotation about the diagonal axis $\frac{\hat{x} + \hat{z}}{\sqrt{2}}$: "
-                r"$$H = \frac{X + Z}{\sqrt{2}} = \exp\left(-i \frac{\pi}{2} \frac{X + Z}{\sqrt{2}}\right)$$" "\n"
-                r"In density matrix formalism, pure state $\rho = |0\rangle\langle 0| = \begin{pmatrix} 1 & 0 \\ 0 & 0 \end{pmatrix}$ evolves to "
-                r"$\rho' = H \rho H^\dagger = \frac{1}{2}\begin{pmatrix} 1 & 1 \\ 1 & 1 \end{pmatrix}$. The off-diagonal coherences $\rho_{01} = \rho_{10} = \frac{1}{2}$ "
-                r"represent maximal quantum phase coherence, enabling non-classical interference."
+                "Geometrically on the Bloch sphere, the Hadamard gate represents an involutory $\\pi$-rotation about the diagonal axis $(\\hat{x} + \\hat{z})/\\sqrt{2}$ ($H = \\frac{X + Z}{\\sqrt{2}}$). "
+                "In density matrix formalism, a pure projector $\\rho = |0\\rangle\\langle 0|$ transforms to $\\rho' = H \\rho H^\\dagger = \\frac{1}{2}(|0\\rangle+|1\\rangle)(\\langle 0|+\\langle 1|)$, "
+                "inducing maximal off-diagonal coherence terms $\\rho_{01} = \\rho_{10} = 1/2$."
             )
             code_example = (
                 "from qiskit import QuantumCircuit\n\n"
                 "qc = QuantumCircuit(1, 1)\n"
-                "qc.h(0)  # Superposition on qubit 0\n"
-                "qc.measure(0, 0)\n"
+                "qc.h(0)          # Creates equal superposition |+>\n"
+                "qc.measure(0, 0) # Measurement yields 0 or 1 with 50% probability\n"
                 "print(qc.draw())"
             )
 
-        # Topic 3: Entanglement, Bell States & Non-Locality
-        elif any(w in q_lower for w in ["entangle", "bell", "epr", "cnot", "phi+", "psi-", "non-locality", "chsh"]):
-            topic_title = "Quantum Entanglement & Bell State Generation"
+        # Topic 3: Entanglement & Bell State Generation
+        elif any(w in q_lower for w in ["entangle", "bell", "epr", "cnot"]):
+            topic_title = "Quantum Entanglement & Bell Pairs"
             high_school_text = (
-                "Entanglement links two qubits so profoundly that their physical properties become one shared destiny. "
-                "Even if Alice takes one qubit to Mars and Bob keeps his on Earth, measuring Alice's qubit instantly reveals what Bob will see! "
-                "Albert Einstein famously called this 'spooky action at a distance', but quantum mechanics proves it is real and essential for quantum computers."
+                "Entanglement connects two qubits so intimately that their fates are locked together, even if separated by billions of light years! "
+                "Albert Einstein famously questioned this, calling it 'spooky action at a distance'. "
+                "When you measure one entangled qubit, you instantly know the state of the other with 100% certainty."
             )
             cs_text = (
-                r"Entangled bipartite states cannot be decomposed as tensor products of individual single-qubit states: "
-                r"$$|\Psi_{AB}\rangle \neq |\psi_A\rangle \otimes |\psi_B\rangle$$" "\n\n"
-                r"The four maximally entangled orthonormal Bell states (EPR pairs) form a complete basis for $\mathbb{C}^4$:" "\n"
-                r"$$|\Phi^+\rangle = \frac{|00\rangle + |11\rangle}{\sqrt{2}}, \quad |\Phi^-\rangle = \frac{|00\rangle - |11\rangle}{\sqrt{2}}$$" "\n"
-                r"$$|\Psi^+\rangle = \frac{|01\rangle + |10\rangle}{\sqrt{2}}, \quad |\Psi^-\rangle = \frac{|01\rangle - |10\rangle}{\sqrt{2}}$$" "\n\n"
-                r"A Bell circuit creates $|\Phi^+\rangle$ by passing qubit 0 through a Hadamard (creating superposition), then using CNOT with qubit 0 as control and qubit 1 as target."
+                "A state is entangled if it cannot be written as a product of single-qubit states: $|\\Psi\\rangle \\neq |\\psi_A\\rangle \\otimes |\\psi_B\\rangle$.\n\n"
+                "The canonical Bell state $|\\Phi^+\\rangle = \\frac{|00\\rangle + |11\\rangle}{\\sqrt{2}}$ is synthesized by applying a Hadamard to qubit 0 "
+                "followed by a CNOT gate with control qubit 0 and target qubit 1:\n\n"
+                "$$|00\\rangle \\xrightarrow{H \\otimes I} \\frac{|00\\rangle + |10\\rangle}{\\sqrt{2}} \\xrightarrow{CX} \\frac{|00\\rangle + |11\\rangle}{\\sqrt{2}}$$"
             )
             phd_text = (
-                r"Entanglement entropy quantifies bipartite entanglement. Tracing out subsystem $B$ yields the reduced density operator: "
-                r"$$\rho_A = \text{Tr}_B(|\Phi^+\rangle\langle\Phi^+|) = \frac{1}{2}(|0\rangle\langle 0| + |1\rangle\langle 1|) = \frac{1}{2} I_2$$" "\n"
-                r"The von Neumann entropy $S(\rho_A) = -\text{Tr}(\rho_A \log_2 \rho_A) = 1$ bit is maximal. "
-                r"Bell states maximally violate the classical Clauser-Horne-Shimony-Holt (CHSH) inequality: "
-                r"$\langle \mathcal{B} \rangle = 2\sqrt{2} \approx 2.828 > 2$ (the classical local-realism bound), saturating Cirel'son's bound."
+                "Bipartite entangled states exhibit non-factorable tensor products. Tracing out subsystem $B$ yields the maximally mixed reduced density operator "
+                "$\\rho_A = \\mathrm{Tr}_B(|\\Phi^+\\rangle\\langle\\Phi^+|) = \\frac{1}{2} I_2$ with von Neumann entropy $S(\\rho_A) = 1$ bit. "
+                "Bell states maximally violate the CHSH inequality, saturating the Cirel'son bound $\\langle \\mathcal{B}_{CHSH} \\rangle = 2\\sqrt{2} \\approx 2.828 > 2$."
             )
             code_example = (
                 "from qiskit import QuantumCircuit\n\n"
                 "qc = QuantumCircuit(2, 2)\n"
-                "qc.h(0)       # Create superposition on control qubit\n"
-                "qc.cx(0, 1)   # Entangle target qubit with control via CNOT\n"
+                "qc.h(0)          # Create superposition on control\n"
+                "qc.cx(0, 1)      # Entangle control with target qubit\n"
                 "qc.measure([0, 1], [0, 1])\n"
                 "print(qc.draw())"
             )

@@ -228,75 +228,10 @@ export const AITheoryMathStudio: React.FC = () => {
         }
       }
     } catch (err) {
-      console.warn('Backend AI API explain endpoint error, executing direct AI connection:', err);
+      console.warn('Backend AI API explain endpoint error:', err);
     }
 
-    // Direct LLM API Fail-Safe Connection (OpenRouter API)
-    try {
-      const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY || import.meta.env.VITE_OPENAI_API_KEY;
-      if (!apiKey) {
-        console.warn('No VITE_OPENROUTER_API_KEY or VITE_OPENAI_API_KEY found in environment variables.');
-        setIsAgentThinking(false);
-        return;
-      }
-      const models = [
-        'google/gemini-2.0-flash-lite-preview-02-05:free',
-        'meta-llama/llama-3.3-70b-instruct:free',
-        'deepseek/deepseek-r1:free',
-        'qwen/qwen-2.5-coder-32b-instruct:free',
-        'mistralai/mistral-7b-instruct:free'
-      ];
-
-      for (const model of models) {
-        try {
-          const directResp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${apiKey}`,
-              'HTTP-Referer': 'http://localhost:3000',
-              'X-Title': 'Stark Sensei'
-            },
-            body: JSON.stringify({
-              model: model,
-              messages: [
-                {
-                  role: 'system',
-                  content: 'You are Stark Sensei, an expert AI tutor. Answer the student prompt clearly, accurately, and thoroughly using Markdown formatting.'
-                },
-                { role: 'user', content: prompt }
-              ],
-              temperature: 0.5,
-              max_tokens: 1200
-            })
-          });
-
-          if (directResp.ok) {
-            const resData = await directResp.json();
-            const content = resData.choices?.[0]?.message?.content;
-            if (content && content.length >= 2) {
-              const aiMsg: ChatMessage = {
-                id: 'msg_agent_' + Date.now(),
-                sender: selectedAgent.id,
-                senderName: selectedAgent.name,
-                senderRole: selectedAgent.role,
-                text: content,
-                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-              };
-              setChatMessages(prev => [...prev, aiMsg]);
-              setIsAgentThinking(false);
-              return;
-            }
-          }
-        } catch {
-          continue;
-        }
-      }
-    } catch (directErr) {
-      console.warn('Direct AI API failover error:', directErr);
-    }
-
-    // Local Intelligent Reasoning Engine Fallback
+    // Local Intelligent Reasoning Engine Fallback (Only if backend server is unreachable)
     const pLower = prompt.toLowerCase().trim();
     let replyText = `### 🤖 Stark Sensei Response\n\n`;
 

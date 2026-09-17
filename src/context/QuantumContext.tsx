@@ -28,6 +28,13 @@ export interface TerminalLogEntry {
   codeHint?: string;
 }
 
+export interface TutorChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+}
+
 interface QuantumContextType {
   // Authentication & User State
   user: User | null;
@@ -100,6 +107,8 @@ interface QuantumContextType {
   aiTab: 'explain' | 'debug' | 'optimize' | 'optimize-debug';
   setAiTab: (tab: 'explain' | 'debug' | 'optimize' | 'optimize-debug') => void;
   aiExplanation: string | null;
+  tutorMessages: TutorChatMessage[];
+  clearTutorChat: () => void;
   aiDebugResult: AIDebugResult | null;
   aiOptimizationResult: AIOptimizationResult | null;
   isAiLoading: boolean;
@@ -214,9 +223,29 @@ export const QuantumProvider: React.FC<{ children: ReactNode }> = ({ children })
   const [isVoiceAnimationModalOpen, setIsVoiceAnimationModalOpen] = useState<boolean>(false);
   const [aiTab, setAiTab] = useState<'explain' | 'debug' | 'optimize' | 'optimize-debug'>('explain');
   const [aiExplanation, setAiExplanation] = useState<string | null>(null);
+  const [tutorMessages, setTutorMessages] = useState<TutorChatMessage[]>([
+    {
+      id: 'msg-welcome',
+      role: 'assistant',
+      content: "### 👋 Hello! I am Stark Sensei\n\nI am your AI Tutor. Ask me **any question**—from basic science, math calculations, and Python code, to quantum superposition, phase kickback, and your active circuit dynamics!\n\nHow can I help you today?",
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    }
+  ]);
   const [aiDebugResult, setAiDebugResult] = useState<AIDebugResult | null>(null);
   const [aiOptimizationResult, setAiOptimizationResult] = useState<AIOptimizationResult | null>(null);
   const [isAiLoading, setIsAiLoading] = useState<boolean>(false);
+
+  const clearTutorChat = () => {
+    setTutorMessages([
+      {
+        id: 'msg-welcome-' + Date.now(),
+        role: 'assistant',
+        content: "### 🔄 Chat Reset\n\nI'm ready for your next question! Ask about algorithms, mathematics, Python coding, or quantum mechanics.",
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }
+    ]);
+    setAiExplanation(null);
+  };
 
   // Progress state
   const [studentProgress, setStudentProgress] = useState<StudentProgress>({
@@ -948,7 +977,32 @@ export const QuantumProvider: React.FC<{ children: ReactNode }> = ({ children })
     setAiDrawerOpen(true);
 
     const queryText = (conceptOrQuery || currentLesson.title || 'Quantum Circuit Dynamics').trim();
+    const userMsgId = 'msg-user-' + Date.now();
+    const userMsg: TutorChatMessage = {
+      id: userMsgId,
+      role: 'user',
+      content: queryText,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
 
+    const updatedChat = [...tutorMessages, userMsg];
+    setTutorMessages(updatedChat);
+
+    const handleSuccess = (reply: string) => {
+      setAiExplanation(reply);
+      setTutorMessages(prev => [
+        ...prev,
+        {
+          id: 'msg-tutor-' + Date.now(),
+          role: 'assistant',
+          content: reply,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }
+      ]);
+      setIsAiLoading(false);
+    };
+
+    // 1. Backend API Call with full chat history
     try {
       const resp = await fetch('/api/ai/explain', {
         method: 'POST',
@@ -970,82 +1024,60 @@ export const QuantumProvider: React.FC<{ children: ReactNode }> = ({ children })
             })),
             shots: 1024,
             framework
-          }
+          },
+          messages: updatedChat.map(m => ({ role: m.role, content: m.content }))
         })
       });
 
       if (resp.ok) {
         const data = await resp.json();
         if (data && data.explanation && data.explanation.length >= 2) {
-          setAiExplanation(data.explanation);
-          setIsAiLoading(false);
+          handleSuccess(data.explanation);
           return;
         }
       }
     } catch (e) {
-      console.warn('Backend API call unreachable, attempting direct AI API connection:', e);
+      console.warn('Backend API call unreachable:', e);
     }
 
-    // Direct LLM API Fall-Safe Connection (OpenRouter API)
-    try {
-      const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY || import.meta.env.VITE_OPENAI_API_KEY;
-      if (!apiKey) {
-        console.warn('No VITE_OPENROUTER_API_KEY or VITE_OPENAI_API_KEY found in environment variables.');
-        setIsAiLoading(false);
-        return;
-      }
-      const models = [
-        'google/gemini-2.0-flash-lite-preview-02-05:free',
-        'meta-llama/llama-3.3-70b-instruct:free',
-        'deepseek/deepseek-r1:free',
-        'qwen/qwen-2.5-coder-32b-instruct:free',
-        'mistralai/mistral-7b-instruct:free'
-      ];
+    // 2. Offline Fallback (Only if backend server is unreachable)
+    setTimeout(() => {
+      const qLower = queryText.toLowerCase();
 
-      for (const model of models) {
+      // Math Calculation
+      if (/[\d]/.test(queryText) && /[\+\-\*\/\%\^]/.test(queryText)) {
         try {
-          const directResp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${apiKey}`,
-              'HTTP-Referer': 'http://localhost:3000',
-              'X-Title': 'Quantum Robot Tutor'
-            },
-            body: JSON.stringify({
-              model: model,
-              messages: [
-                {
-                  role: 'system',
-                  content: `You are a Tutor. Answer the user prompt '${queryText}' directly, accurately, and thoroughly with Markdown formatting.`
-                },
-                { role: 'user', content: queryText }
-              ],
-              temperature: 0.5,
-              max_tokens: 1200
-            })
-          });
-
-          if (directResp.ok) {
-            const resData = await directResp.json();
-            const content = resData.choices?.[0]?.message?.content?.strip?.() || resData.choices?.[0]?.message?.content;
-            if (content && content.length >= 2) {
-              setAiExplanation(content);
-              setIsAiLoading(false);
+          const cleanExpr = queryText.replace(/[^0-9\+\-\*\/\(\)\.\s]/g, '');
+          if (cleanExpr.trim()) {
+            const evaluated = Function(`'use strict'; return (${cleanExpr})`)();
+            if (typeof evaluated === 'number' && !isNaN(evaluated)) {
+              handleSuccess(`### 🧮 Math Calculation Result\n\n**Expression:** \`${cleanExpr.trim()}\`\n\n**Result:** **\`${evaluated}\`**\n\n---\n*Need step-by-step breakdown or another formula? Just ask!*`);
               return;
             }
           }
         } catch {
-          continue;
+          // Continue to next handlers
         }
       }
-    } catch (directErr) {
-      console.warn('Direct AI API failover error:', directErr);
-    }
 
-    // Local Intelligent Reasoning Fallback (Deep Multi-Domain Quantum Engine)
-    setTimeout(() => {
-      const qLower = queryText.toLowerCase();
+      // Python / Code queries
+      if (qLower.includes('python') || qLower.includes('binary search') || qLower.includes('reverse') || qLower.includes('code')) {
+        if (qLower.includes('binary search')) {
+          handleSuccess(`### 💻 Binary Search in Python\n\nBinary search finds elements in a sorted list in $\\mathcal{O}(\\log n)$ time:\n\n\`\`\`python\ndef binary_search(arr: list[int], target: int) -> int:\n    low, high = 0, len(arr) - 1\n    while low <= high:\n        mid = (low + high) // 2\n        if arr[mid] == target:\n            return mid\n        elif arr[mid] < target:\n            low = mid + 1\n        else:\n            high = mid - 1\n    return -1\n\`\`\``);
+          return;
+        } else if (qLower.includes('reverse')) {
+          handleSuccess(`### 💻 Reversing in Python\n\nUse slice notation \`[::-1]\` for the cleanest approach:\n\n\`\`\`python\n# Reversing a list or string\nnumbers = [1, 2, 3, 4, 5]\nreversed_nums = numbers[::-1]  # [5, 4, 3, 2, 1]\n\`\`\``);
+          return;
+        }
+      }
+
+      // Linear Algebra & Eigenvalues
+      if (qLower.includes('eigen') || qLower.includes('matrix')) {
+        handleSuccess(`### 📐 Eigenvalues & Eigenvectors\n\nAn eigenvector $|v\\rangle$ under transformation $A$ satisfies:\n\n$$A |v\\rangle = \\lambda |v\\rangle$$\n\nIn quantum mechanics, measurement outcomes are the **real eigenvalues** $\\lambda$ of Hermitian observable operators.`);
+        return;
+      }
+
+      // Quantum Physics Topics
       let topicTitle = `Quantum Physics Analysis: ${queryText}`;
       let conceptualBody = '';
       let codeExample = '';
@@ -1097,31 +1129,30 @@ export const QuantumProvider: React.FC<{ children: ReactNode }> = ({ children })
         conceptualBody = "Measurement is non-unitary and irreversible. Under the Born Rule, the probability of observing outcome $m$ for state $|\psi\\rangle$ is $P(m) = |\\langle m | \\psi \\rangle|^2$. Upon measurement, the state instantaneously projects into the corresponding eigenstate $|m\\rangle$, destroying quantum phase coherences and causing irreversible wavefunction collapse.";
         codeExample = "from qiskit import QuantumCircuit\n\nqc = QuantumCircuit(1, 1)\nqc.h(0)           # Equal superposition\nqc.measure(0, 0)  # Measurement projection\nprint(qc.draw())";
       } else {
-        topicTitle = `Theoretical Physics Analysis: ${queryText}`;
-        conceptualBody = `In quantum computing, computational operations represent unitary operators $U \\in U(2^n)$ acting on complex Hilbert spaces $\\mathcal{H} = (\\mathbb{C}^2)^{\\otimes n}$. Algorithms addressing '${queryText}' orchestrate constructive and destructive interference of probability amplitudes $\\alpha_x$ across multiple qubit registers. Statevectors evolve according to the Schrödinger equation $i\\hbar \\frac{d}{dt}|\\psi\\rangle = H |\\psi\\rangle$, preserving total probability $\\sum |\\alpha_x|^2 = 1$ until measurement collapses the superposition into classical bitstrings.`;
-        codeExample = `from qiskit import QuantumCircuit\n\n# Quantum demonstration for: ${queryText.slice(0, 35)}\nqc = QuantumCircuit(${Math.max(2, qubitCount)}, ${Math.max(2, qubitCount)})\nqc.h(0)        # Initialize superposition\nqc.cx(0, 1)    # Multi-qubit entanglement\nqc.rz(0.785, 1)# Phase transformation\nqc.measure_all()\nprint(qc.draw())`;
+        topicTitle = `Conceptual Overview: ${queryText}`;
+        conceptualBody = `In scientific and computational systems, concepts like **${queryText}** are evaluated through structured logic, mathematical transformations, and algorithmic execution. Each operation preserves rigorous domain rules, allowing you to model and solve the problem systematically.`;
+        codeExample = `from qiskit import QuantumCircuit\n\n# Computational demonstration for: ${queryText.slice(0, 35)}\nqc = QuantumCircuit(${Math.max(2, qubitCount)}, ${Math.max(2, qubitCount)})\nqc.h(0)        # Initialize state\nqc.cx(0, 1)    # Multi-qubit interaction\nqc.measure_all()\nprint(qc.draw())`;
       }
 
       const explanation = `### 🧠 Tutor: ${topicTitle}
 **Profile Adaptation:** *${userBackground.toUpperCase()} Track*
 
-#### 💡 Comprehensive Physical & Conceptual Breakdown
+#### 💡 Comprehensive Breakdown
 ${conceptualBody}
 
 ### 🔬 Active Circuit Context
 Your workspace currently maintains **${gates.length} gate(s)** across **${qubitCount} qubit wire(s)** in the **${framework.toUpperCase()}** environment.
 
-#### 💻 Complete Executable Qiskit Python Code
+#### 💻 Complete Executable Python Code
 \`\`\`python
 ${codeExample}
 \`\`\`
 
 #### 🎯 Key Physical Takeaways & Hardware Realities
-Understanding how quantum phase angles, unitary rotations, and constructive wave interference combine enables you to design fault-tolerant quantum subroutines with provable quantum advantages.`;
+Understanding how fundamentals connect allows you to reason about complex quantum algorithms with clarity and precision.`;
 
-      setAiExplanation(explanation);
-      setIsAiLoading(false);
-    }, 600);
+      handleSuccess(explanation);
+    }, 500);
   };
 
   const runAiOptimizeAndDebug = async () => {
@@ -1332,6 +1363,8 @@ Understanding how quantum phase angles, unitary rotations, and constructive wave
         aiTab,
         setAiTab,
         aiExplanation,
+        tutorMessages,
+        clearTutorChat,
         aiDebugResult,
         aiOptimizationResult,
         isAiLoading,
