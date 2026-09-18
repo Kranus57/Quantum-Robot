@@ -3,8 +3,12 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    color-scheme: light;
+  }
+
   body {
-    @apply bg-white text-slate-900 min-h-screen font-sans antialiased tracking-tight;
+    @apply bg-white text-slate-900 min-h-screen font-sans antialiased tracking-tight transition-colors duration-200;
   }
 }
 
@@ -26,6 +30,69 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* Dark theme overrides for the shared utility palette used throughout the app. */
+.dark body {
+  background: #0b1220;
+  color: #e2e8f0;
+}
+
+.dark ::-webkit-scrollbar-track { background: #111827; }
+.dark ::-webkit-scrollbar-thumb { background: #334155; }
+.dark ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+.dark .bg-white,
+.dark .bg-white\/80,
+.dark .bg-white\/90,
+.dark .bg-white\/95,
+.dark .bg-white\/98 { background-color: #111827 !important; }
+
+.dark .bg-slate-50,
+.dark .bg-slate-50\/70,
+.dark .bg-slate-50\/80 { background-color: #0f172a !important; }
+
+.dark .bg-slate-100,
+.dark .bg-slate-100\/70 { background-color: #172033 !important; }
+
+.dark .bg-slate-200\/60 { background-color: rgba(51, 65, 85, 0.6) !important; }
+
+.dark .text-slate-900,
+.dark .text-slate-800 { color: #f8fafc !important; }
+
+.dark .text-slate-700 { color: #cbd5e1 !important; }
+.dark .text-slate-600,
+.dark .text-slate-500 { color: #94a3b8 !important; }
+.dark .text-slate-400 { color: #64748b !important; }
+
+.dark .border-slate-100 { border-color: #1e293b !important; }
+.dark .border-slate-200,
+.dark .border-slate-300 { border-color: #334155 !important; }
+
+.dark select,
+.dark input,
+.dark textarea {
+  background-color: #111827 !important;
+  color: #e2e8f0 !important;
+  border-color: #334155 !important;
+}
+
+.dark option { background: #111827; color: #e2e8f0; }
+
+.dark .glass-panel,
+.dark .glass-card {
+  background: rgba(15, 23, 42, 0.94);
+  border-color: #334155;
+}
+
+.dark .quantum-grid-bg {
+  background-image:
+    linear-gradient(to right, rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+}
+
+.dark .hover\:bg-slate-100:hover { background-color: #1e293b !important; }
+.dark .hover\:bg-slate-200\/60:hover { background-color: rgba(51, 65, 85, 0.6) !important; }
+.dark .hover\:text-slate-900:hover { color: #ffffff !important; }
 
 /* Glassmorphism panel styling */
 .glass-panel {

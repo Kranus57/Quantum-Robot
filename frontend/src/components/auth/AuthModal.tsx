@@ -693,9 +693,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, isMandato
               </div>
               <div>
                 <span className="text-xl font-extrabold text-slate-900 flex items-center space-x-2">
-                  <span>QUANTUM STUDIO</span>
+                  <span>Q<span className="text-blue-600">LEARN</span></span>
                 </span>
-                <p className="text-xs text-slate-500 font-semibold">Enterprise Quantum Computing & Simulation Platform</p>
+                <p className="text-xs text-slate-500 font-semibold">Interactive Quantum Learning Platform</p>
               </div>
             </div>
 

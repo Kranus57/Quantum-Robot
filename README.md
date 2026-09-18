@@ -21,6 +21,21 @@ Quantum Robot is an interactive quantum-computing education platform. It combine
 
 The default setup needs no database server: SQLite is created automatically when the backend starts.
 
+## Project Structure
+
+The frontend is grouped under `frontend/`, while the Python API remains under `backend/`:
+
+```text
+frontend/
+	index.html
+	src/
+backend/
+	main.py
+	requirements.txt
+```
+
+Run frontend commands from the repository root. Vite is configured to use `frontend/` as its application root.
+
 ## Setup on Ubuntu
 
 Open a terminal and follow the steps in order. Commands beginning with `$` are examples of what you type.
