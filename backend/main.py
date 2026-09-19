@@ -63,7 +63,7 @@ except ModuleNotFoundError:
 init_db()
 
 app = FastAPI(
-    title="QuantumEdu AI API Engine",
+    title="QLearn API Engine",
     description="Multi-framework quantum simulation, AI intelligent tutoring, WebSockets, and PostgreSQL/SQLite database API backend",
     version="3.0.0"
 )
@@ -85,10 +85,10 @@ def startup_event():
 def health_check():
     return {
         "status": "online",
-        "service": "QuantumEdu AI Engine v3.0",
+        "service": "QLearn API Engine v3.0",
         "database": "PostgreSQL / SQLite SQLAlchemy ORM Active",
         "supported_frameworks": ["qiskit", "cirq", "pennylane", "native"],
-        "multiplayer_ws": "ws://localhost:8001/ws/collaborate/{session_id}"
+        "multiplayer_ws": "/ws/collaborate/{session_id}"
     }
 
 @app.get("/api/db/health")
@@ -518,6 +518,7 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    port = int(os.environ.get("PORT", 8001))
+    uvicorn.run(app, host="0.0.0.0", port=port)
 
 

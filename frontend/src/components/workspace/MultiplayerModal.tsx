@@ -8,7 +8,8 @@ export const MultiplayerModal: React.FC<{ isOpen: boolean; onClose: () => void }
 
   if (!isOpen) return null;
 
-  const sessionUrl = `http://localhost:3000/?session=${multiplayerSession?.sessionId || 'q_sandbox_882'}`;
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+  const sessionUrl = `${origin}/?session=${multiplayerSession?.sessionId || 'q_sandbox_882'}`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(sessionUrl);
