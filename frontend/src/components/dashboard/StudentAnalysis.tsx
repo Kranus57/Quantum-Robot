@@ -233,40 +233,40 @@ export const StudentAnalysis: React.FC = () => {
           </div>
         </div>
 
-        {/* AI Personal Coach & Insights */}
-        <div className="p-6 rounded-2xl bg-gradient-to-b from-slate-900 to-indigo-950 text-white space-y-5 shadow-lg relative overflow-hidden">
-          <div className="flex items-center space-x-2 border-b border-slate-800 pb-3">
-            <Sparkles className="w-5 h-5 text-cyan-400 animate-pulse" />
-            <h3 className="font-bold text-sm text-white">AI Learning Coach Insights</h3>
+        {/* Coaching Insight */}
+        <div className="p-6 rounded-2xl bg-white border border-slate-200 text-slate-900 space-y-5 shadow-sm relative overflow-hidden">
+          <div className="flex items-center space-x-2 border-b border-slate-100 pb-3">
+            <Sparkles className="w-5 h-5 text-blue-600" />
+            <h3 className="font-bold text-sm text-slate-900">Coaching Insight</h3>
           </div>
 
           <div className="space-y-4 text-xs">
-            <div className="p-3.5 rounded-xl bg-slate-800/80 border border-slate-700 space-y-1">
-              <div className="font-bold text-cyan-300 flex items-center space-x-1.5">
-                <BrainCircuit className="w-4 h-4" />
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+              <div className="font-bold text-blue-600 flex items-center space-x-1.5">
+                <BrainCircuit className="w-4 h-4 text-blue-600" />
                 <span>Recommended Next Step</span>
               </div>
-              <p className="text-slate-300 text-[11px] leading-relaxed">
+              <p className="text-slate-600 text-[11px] leading-relaxed">
                 {pathSummary.recommendedNode 
                   ? pathSummary.recommendedNode.recommendedReason
                   : 'Great job! You have achieved high proficiency across all fundamental quantum topics.'}
               </p>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-slate-800/80 border border-slate-700 space-y-1">
-              <div className="font-bold text-amber-300 flex items-center space-x-1.5">
-                <Layers className="w-4 h-4" />
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+              <div className="font-bold text-amber-600 flex items-center space-x-1.5">
+                <Layers className="w-4 h-4 text-amber-600" />
                 <span>Circuit Execution Mastery</span>
               </div>
-              <p className="text-slate-300 text-[11px] leading-relaxed">
-                You have executed <span className="font-mono text-white font-bold">{studentProgress.totalCircuitsRun} quantum simulations</span>. Adding explicit Measurement gates and testing with noise models will increase statevector fidelity comprehension.
+              <p className="text-slate-600 text-[11px] leading-relaxed">
+                You have executed <span className="font-mono text-slate-900 font-bold">{studentProgress.totalCircuitsRun} quantum simulations</span>. Adding explicit Measurement gates and testing with noise models will increase statevector fidelity comprehension.
               </p>
             </div>
 
             {pathSummary.recommendedNode && (
               <button
                 onClick={() => launchPathNode(pathSummary.recommendedNode!.lessonId)}
-                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center space-x-2"
+                className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm transition-all flex items-center justify-center space-x-2 cursor-pointer"
               >
                 <span>Practice Recommended Topic</span>
                 <ArrowRight className="w-4 h-4" />

@@ -24,7 +24,7 @@ import { ArrowAssistOverlay } from './components/workspace/ArrowAssistOverlay';
 import { InteractiveVoiceAnimationModal } from './components/workspace/InteractiveVoiceAnimationModal';
 import { AICodeArchitectModal } from './components/ai/AICodeArchitectModal';
 import { ModuleAgenticTestModal } from './components/assessment/ModuleAgenticTestModal';
-import { Activity, BarChart2, BrainCircuit, Compass, Cpu, Code2, Globe, Network, X } from 'lucide-react';
+import { Activity, BarChart2, BrainCircuit, Compass, Cpu, Code2, Globe, Network, X, Minimize2, Maximize2 } from 'lucide-react';
 
 const ModeChooser: React.FC<{ onChoose: (view: 'workspace' | 'learning-path' | 'theory-math' | 'student-dashboard' | 'student-analysis') => void; onClose: () => void }> = ({ onChoose, onClose }) => {
   const toneClasses: Record<string, string> = {
@@ -114,10 +114,117 @@ const ModeChooser: React.FC<{ onChoose: (view: 'workspace' | 'learning-path' | '
 };
 
 const WorkspaceLayout: React.FC = () => {
-  const { centerTab, setCenterTab, visualizerMode, setVisualizerMode } = useQuantum();
+  const { 
+    centerTab, 
+    setCenterTab, 
+    visualizerMode, 
+    setVisualizerMode,
+    isFullscreenWorkspace,
+    setIsFullscreenWorkspace,
+    qubitCount,
+    stepCount,
+    gates
+  } = useQuantum();
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullscreenWorkspace) {
+        setIsFullscreenWorkspace(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFullscreenWorkspace, setIsFullscreenWorkspace]);
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden relative">
+      {/* Fullscreen Workspace Modal Overlay with Live Quantum Preview */}
+      {isFullscreenWorkspace && (
+        <div className="fixed inset-0 z-50 bg-white flex flex-col overflow-hidden select-none animate-fadeIn">
+          {/* Fullscreen Top Navigation Bar */}
+          <div className="h-12 bg-slate-900 text-white px-4 flex items-center justify-between border-b border-slate-800 shadow-md">
+            <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2 text-cyan-400 font-bold text-sm">
+                <Cpu className="w-5 h-5 text-cyan-400 animate-pulse" />
+                <span>Quantum Studio (Full Screen Mode)</span>
+              </div>
+              <div className="hidden sm:flex items-center space-x-2 text-xs font-mono text-slate-400 pl-3 border-l border-slate-700">
+                <span className="px-2 py-0.5 rounded bg-slate-800 text-blue-300 font-semibold border border-slate-700">Rows (Qubits): {qubitCount}</span>
+                <span className="px-2 py-0.5 rounded bg-slate-800 text-indigo-300 font-semibold border border-slate-700">Cols (Steps): {stepCount}</span>
+                <span className="px-2 py-0.5 rounded bg-slate-800 text-emerald-300 font-semibold border border-slate-700">Gates: {gates.length}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-3">
+              <span className="text-[11px] font-mono text-slate-400 hidden md:inline">
+                Press <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200">Esc</kbd> to exit
+              </span>
+              <button
+                onClick={() => setIsFullscreenWorkspace(false)}
+                className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-sm transition-all cursor-pointer"
+              >
+                <Minimize2 className="w-4 h-4" />
+                <span>Exit Fullscreen</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Fullscreen Body: Split between Circuit Canvas and Quantum Preview Panel */}
+          <div className="flex-1 flex overflow-hidden">
+            {/* Left/Center: Visual Circuit Builder with Stepper */}
+            <div className="flex-1 flex flex-col border-r border-slate-200 overflow-hidden bg-white">
+              <div className="flex-1 overflow-hidden">
+                <VisualCircuitBuilder />
+              </div>
+              <StepByStepStepper />
+            </div>
+
+            {/* Right: Quantum Preview Panel (Always visible in fullscreen) */}
+            <div className="w-[420px] flex-shrink-0 flex flex-col bg-slate-50 border-l border-slate-200 overflow-y-auto">
+              <div className="h-10 flex-shrink-0 px-3 bg-white border-b border-slate-200 flex items-center justify-between sticky top-0 z-20 shadow-2xs">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center space-x-1.5">
+                  <Globe className="w-4 h-4 text-blue-600" />
+                  <span>Quantum Preview Analysis</span>
+                </span>
+                <span className="text-[10px] px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-mono font-bold">Live State</span>
+              </div>
+
+              {/* Visualizer Mode Selector Switcher */}
+              <div className="p-1.5 bg-slate-100 border-b border-slate-200 flex items-center justify-center space-x-1 sticky top-10 z-20">
+                <button
+                  onClick={() => setVisualizerMode('bloch')}
+                  className={`flex items-center space-x-1.5 px-3 py-1 rounded text-xs font-semibold transition-all cursor-pointer ${
+                    visualizerMode === 'bloch'
+                      ? 'bg-white text-blue-600 border border-slate-200 shadow-xs font-bold'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Globe className="w-3.5 h-3.5 text-blue-600" />
+                  <span>3D Bloch Sphere</span>
+                </button>
+
+                <button
+                  onClick={() => setVisualizerMode('qosphere')}
+                  className={`flex items-center space-x-1.5 px-3 py-1 rounded text-xs font-semibold transition-all cursor-pointer ${
+                    visualizerMode === 'qosphere'
+                      ? 'bg-white text-indigo-600 border border-slate-200 shadow-xs font-bold'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Network className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Qosphere Entanglement</span>
+                </button>
+              </div>
+
+              {/* Render Active Visualizer */}
+              {visualizerMode === 'bloch' ? <BlochSphere3D /> : <QosphereVisualizer />}
+              <ProbabilitiesChart />
+              <StateVectorMatrix />
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="h-14 flex-shrink-0 px-5 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-cyan-300 flex items-center justify-center border border-blue-100 dark:border-blue-400/20">

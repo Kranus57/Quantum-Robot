@@ -55,12 +55,20 @@ interface QuantumContextType {
   setCenterTab: (tab: 'visual' | 'code') => void;
   visualizerMode: 'bloch' | 'qosphere';
   setVisualizerMode: (mode: 'bloch' | 'qosphere') => void;
+  isFullscreenWorkspace: boolean;
+  setIsFullscreenWorkspace: (fs: boolean) => void;
 
   // Circuit State
   gates: QuantumGate[];
   setGates: React.Dispatch<React.SetStateAction<QuantumGate[]>>;
   qubitCount: number;
   setQubitCount: (count: number) => void;
+  stepCount: number;
+  setStepCount: (count: number) => void;
+  addQubitRow: () => void;
+  removeQubitRow: () => void;
+  addStepColumn: () => void;
+  removeStepColumn: () => void;
   addGate: (gate: Omit<QuantumGate, 'id'>) => void;
   removeGate: (gateId: string) => void;
   clearCircuit: () => void;
@@ -169,10 +177,15 @@ export const QuantumProvider: React.FC<{ children: ReactNode }> = ({ children })
   const [activeView, setActiveView] = useState<ActiveViewMode>('workspace');
   const [centerTab, setCenterTab] = useState<'visual' | 'code'>('visual');
   const [visualizerMode, setVisualizerMode] = useState<'bloch' | 'qosphere'>('bloch');
+  const [isFullscreenWorkspace, setIsFullscreenWorkspace] = useState<boolean>(false);
 
   const [qubitCount, setQubitCount] = useState<number>(() => {
     const saved = localStorage.getItem('quantum_qubit_count');
     return saved ? parseInt(saved, 10) : 3;
+  });
+  const [stepCount, setStepCount] = useState<number>(() => {
+    const saved = localStorage.getItem('quantum_step_count');
+    return saved ? parseInt(saved, 10) : 8;
   });
   const [gates, setGates] = useState<QuantumGate[]>(() => {
     const saved = localStorage.getItem('quantum_active_gates');
@@ -821,11 +834,51 @@ export const QuantumProvider: React.FC<{ children: ReactNode }> = ({ children })
       .catch(err => console.warn('Could not fetch user progress from DB:', err));
   }, [user?.id]);
 
-  // Save active circuit state to localStorage whenever gates or qubitCount changes
+  // Save active circuit state to localStorage whenever gates, qubitCount or stepCount changes
   useEffect(() => {
     localStorage.setItem('quantum_active_gates', JSON.stringify(gates));
     localStorage.setItem('quantum_qubit_count', qubitCount.toString());
-  }, [gates, qubitCount]);
+    localStorage.setItem('quantum_step_count', stepCount.toString());
+  }, [gates, qubitCount, stepCount]);
+
+  const updateQubitCount = (count: number) => {
+    const clamped = Math.max(1, Math.min(8, count));
+    if (clamped < qubitCount) {
+      setGates(currentGates => currentGates.filter(g => 
+        g.qubit < clamped && 
+        (g.targetQubit === undefined || g.targetQubit < clamped) &&
+        (g.control2Qubit === undefined || g.control2Qubit < clamped)
+      ));
+      if (selectedQubit >= clamped) {
+        setSelectedQubit(Math.max(0, clamped - 1));
+      }
+    }
+    setQubitCount(clamped);
+  };
+
+  const addQubitRow = () => {
+    updateQubitCount(qubitCount + 1);
+  };
+
+  const removeQubitRow = () => {
+    updateQubitCount(qubitCount - 1);
+  };
+
+  const updateStepCount = (count: number) => {
+    const clamped = Math.max(4, Math.min(24, count));
+    if (clamped < stepCount) {
+      setGates(currentGates => currentGates.filter(g => g.step < clamped));
+    }
+    setStepCount(clamped);
+  };
+
+  const addStepColumn = () => {
+    updateStepCount(stepCount + 1);
+  };
+
+  const removeStepColumn = () => {
+    updateStepCount(stepCount - 1);
+  };
 
   const fetchAdminDBData = async (): Promise<DBTableSummary | null> => {
     try {
@@ -1321,10 +1374,18 @@ Understanding how fundamentals connect allows you to reason about complex quantu
         setCenterTab,
         visualizerMode,
         setVisualizerMode,
+        isFullscreenWorkspace,
+        setIsFullscreenWorkspace,
         gates,
         setGates,
         qubitCount,
-        setQubitCount,
+        setQubitCount: updateQubitCount,
+        stepCount,
+        setStepCount: updateStepCount,
+        addQubitRow,
+        removeQubitRow,
+        addStepColumn,
+        removeStepColumn,
         addGate,
         removeGate,
         clearCircuit,
