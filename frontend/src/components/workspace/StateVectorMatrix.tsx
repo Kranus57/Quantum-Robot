@@ -2,7 +2,11 @@ import React from 'react';
 import { useQuantum } from '../../context/QuantumContext';
 import { Binary } from 'lucide-react';
 
-export const StateVectorMatrix: React.FC = () => {
+interface StateVectorMatrixProps {
+  className?: string;
+}
+
+export const StateVectorMatrix: React.FC<StateVectorMatrixProps> = ({ className = 'flex-1 flex flex-col' }) => {
   const { simulationResult, qubitCount } = useQuantum();
 
   const stateVector = simulationResult?.stateVector || [
@@ -11,7 +15,7 @@ export const StateVectorMatrix: React.FC = () => {
   ];
 
   return (
-    <div className="flex-1 flex flex-col bg-white overflow-hidden">
+    <div className={`${className} bg-white overflow-hidden`}>
       <div className="p-2.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
         <div className="flex items-center space-x-2 text-xs font-semibold text-blue-600">
           <Binary className="w-4 h-4" />

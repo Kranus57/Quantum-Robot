@@ -2,9 +2,13 @@ import React, { useState } from 'react';
 import { useQuantum } from '../../context/QuantumContext';
 import { CURRICULUM_LESSONS } from '../../data/curriculumData';
 import { getAdaptiveExplanation } from '../../utils/personalizedPathEngine';
-import { BookOpen, CheckCircle, HelpCircle, Sparkles, ChevronRight, Compass, GraduationCap, BrainCircuit } from 'lucide-react';
+import { BookOpen, CheckCircle, HelpCircle, Sparkles, ChevronRight, ChevronLeft, Compass, GraduationCap, BrainCircuit } from 'lucide-react';
 
-export const CurriculumPanel: React.FC = () => {
+interface CurriculumPanelProps {
+  onCollapse?: () => void;
+}
+
+export const CurriculumPanel: React.FC<CurriculumPanelProps> = ({ onCollapse }) => {
   const { currentLesson, selectLessonById, submitQuizAnswer, studentProgress, runAiExplain, userBackground, pathSummary, setActiveView } = useQuantum();
   const [selectedQuizOption, setSelectedQuizOption] = useState<number | null>(null);
   const [quizSubmitted, setQuizSubmitted] = useState<boolean>(false);
@@ -57,6 +61,15 @@ export const CurriculumPanel: React.FC = () => {
           <span className="text-[11px] px-2.5 py-0.5 rounded bg-white text-slate-700 border border-slate-200 font-mono font-medium shadow-sm">
             {studentProgress.completedLessonIds.length} / {CURRICULUM_LESSONS.length} Completed
           </span>
+          {onCollapse && (
+            <button
+              onClick={onCollapse}
+              className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer ml-1"
+              title="Collapse Curriculum Panel"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
 

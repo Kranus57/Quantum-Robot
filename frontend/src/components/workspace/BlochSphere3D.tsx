@@ -4,7 +4,11 @@ import { useQuantum } from '../../context/QuantumContext';
 import { calculateBlochVector } from '../../utils/quantumSimulator';
 import { Globe } from 'lucide-react';
 
-export const BlochSphere3D: React.FC = () => {
+interface BlochSphere3DProps {
+  className?: string;
+}
+
+export const BlochSphere3D: React.FC<BlochSphere3DProps> = ({ className = 'h-64' }) => {
   const { simulationResult, selectedQubit, setSelectedQubit, qubitCount } = useQuantum();
   const mountRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -16,8 +20,8 @@ export const BlochSphere3D: React.FC = () => {
   useEffect(() => {
     if (!mountRef.current) return;
 
-    const width = mountRef.current.clientWidth;
-    const height = mountRef.current.clientHeight;
+    const width = mountRef.current.clientWidth || 300;
+    const height = mountRef.current.clientHeight || 250;
 
     const scene = new THREE.Scene();
     sceneRef.current = scene;
@@ -30,6 +34,19 @@ export const BlochSphere3D: React.FC = () => {
     renderer.setSize(width, height);
     renderer.setPixelRatio(window.devicePixelRatio);
     mountRef.current.appendChild(renderer.domElement);
+
+    const handleResize = () => {
+      if (!mountRef.current) return;
+      const newWidth = mountRef.current.clientWidth;
+      const newHeight = mountRef.current.clientHeight;
+      if (newWidth > 0 && newHeight > 0) {
+        camera.aspect = newWidth / newHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(newWidth, newHeight);
+      }
+    };
+    const resizeObserver = new ResizeObserver(handleResize);
+    resizeObserver.observe(mountRef.current);
 
     // 1. Light Sphere Mesh
     const sphereGeometry = new THREE.SphereGeometry(1, 32, 32);
@@ -111,6 +128,7 @@ export const BlochSphere3D: React.FC = () => {
     animate();
 
     return () => {
+      resizeObserver.disconnect();
       cancelAnimationFrame(animationFrameId);
       domElement.removeEventListener('mousedown', handleMouseDown);
       window.removeEventListener('mousemove', handleMouseMove);
@@ -129,7 +147,7 @@ export const BlochSphere3D: React.FC = () => {
   }, [bloch.x, bloch.y, bloch.z]);
 
   return (
-    <div className="h-64 flex flex-col bg-white border-b border-slate-200 overflow-hidden relative shadow-sm">
+    <div className={`${className} flex flex-col bg-white border-b border-slate-200 overflow-hidden relative shadow-sm`}>
       {/* Header Bar */}
       <div className="p-2.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between z-10">
         <div className="flex items-center space-x-2 text-xs font-semibold text-blue-600">

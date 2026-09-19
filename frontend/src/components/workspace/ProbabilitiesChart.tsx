@@ -3,7 +3,11 @@ import { useQuantum } from '../../context/QuantumContext';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { BarChart2 } from 'lucide-react';
 
-export const ProbabilitiesChart: React.FC = () => {
+interface ProbabilitiesChartProps {
+  className?: string;
+}
+
+export const ProbabilitiesChart: React.FC<ProbabilitiesChartProps> = ({ className = 'h-56' }) => {
   const { simulationResult } = useQuantum();
 
   const probabilities = simulationResult?.probabilities || { '00': 1 };
@@ -18,7 +22,7 @@ export const ProbabilitiesChart: React.FC = () => {
   const colors = ['#2563EB', '#4F46E5', '#0284C7', '#059669', '#D97706', '#E11D48'];
 
   return (
-    <div className="h-56 flex flex-col bg-white border-b border-slate-200 overflow-hidden shadow-sm">
+    <div className={`${className} flex flex-col bg-white border-b border-slate-200 overflow-hidden shadow-sm`}>
       <div className="p-2.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
         <div className="flex items-center space-x-2 text-xs font-semibold text-blue-600">
           <BarChart2 className="w-4 h-4" />

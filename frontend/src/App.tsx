@@ -24,7 +24,8 @@ import { ArrowAssistOverlay } from './components/workspace/ArrowAssistOverlay';
 import { InteractiveVoiceAnimationModal } from './components/workspace/InteractiveVoiceAnimationModal';
 import { AICodeArchitectModal } from './components/ai/AICodeArchitectModal';
 import { ModuleAgenticTestModal } from './components/assessment/ModuleAgenticTestModal';
-import { Activity, BarChart2, BrainCircuit, Compass, Cpu, Code2, Globe, Network, X, Minimize2, Maximize2 } from 'lucide-react';
+import { CURRICULUM_LESSONS } from './data/curriculumData';
+import { Activity, BarChart2, BrainCircuit, Compass, Cpu, Code2, Globe, Network, X, Minimize2, Maximize2, ChevronLeft, ChevronRight, Layers, Binary, BookOpen } from 'lucide-react';
 
 const ModeChooser: React.FC<{ onChoose: (view: 'workspace' | 'learning-path' | 'theory-math' | 'student-dashboard' | 'student-analysis') => void; onClose: () => void }> = ({ onChoose, onClose }) => {
   const toneClasses: Record<string, string> = {
@@ -123,8 +124,13 @@ const WorkspaceLayout: React.FC = () => {
     setIsFullscreenWorkspace,
     qubitCount,
     stepCount,
-    gates
+    gates,
+    studentProgress
   } = useQuantum();
+
+  const [isCurriculumCollapsed, setIsCurriculumCollapsed] = useState<boolean>(false);
+  const [isRightPanelCollapsed, setIsRightPanelCollapsed] = useState<boolean>(false);
+  const [previewTab, setPreviewTab] = useState<'3d' | 'probabilities' | 'statevector' | 'all'>('3d');
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -225,39 +231,48 @@ const WorkspaceLayout: React.FC = () => {
         </div>
       )}
 
-      <div className="h-14 flex-shrink-0 px-5 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-cyan-300 flex items-center justify-center border border-blue-100 dark:border-blue-400/20">
-            <Activity className="w-4 h-4" />
-          </div>
-          <div>
-            <h1 className="text-sm font-black text-slate-900 dark:text-white tracking-tight">Lab Workspace</h1>
-            <p className="text-[10px] text-slate-500 dark:text-slate-400">Learn, build, simulate, and inspect your quantum circuit</p>
-          </div>
-        </div>
-        <div className="hidden md:flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider">
-          <span className="px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-cyan-300 border border-blue-100 dark:border-blue-400/20">1. Learn</span>
-          <span className="text-slate-300 dark:text-slate-600">/</span>
-          <span className="px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-400/20">2. Build</span>
-          <span className="text-slate-300 dark:text-slate-600">/</span>
-          <span className="px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-400/20">3. Run</span>
-        </div>
-      </div>
       {/* 3-Panel Split View Layout */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left Panel: Structured Markdown Curriculum Viewer */}
-        <div className="w-[320px] flex-shrink-0 border-r border-slate-200 dark:border-slate-700">
-          <CurriculumPanel />
-        </div>
+        {!isCurriculumCollapsed ? (
+          <div className="w-[300px] lg:w-[320px] flex-shrink-0 border-r border-slate-200 dark:border-slate-700 transition-all duration-200 ease-in-out flex flex-col">
+            <CurriculumPanel onCollapse={() => setIsCurriculumCollapsed(true)} />
+          </div>
+        ) : (
+          <div className="w-10 flex-shrink-0 bg-slate-50 border-r border-slate-200 flex flex-col items-center py-2.5 justify-between transition-all duration-200 ease-in-out select-none">
+            <button
+              onClick={() => setIsCurriculumCollapsed(false)}
+              className="p-1.5 rounded-lg bg-white hover:bg-blue-50 text-blue-600 border border-slate-200 shadow-xs cursor-pointer transition-colors"
+              title="Expand Curriculum Panel"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+
+            <div className="flex flex-col items-center gap-3 my-auto py-4">
+              <BookOpen className="w-4 h-4 text-blue-600" />
+              <span className="text-[10px] font-bold text-slate-500 tracking-wider [writing-mode:vertical-lr] rotate-180 uppercase">
+                Curriculum ({studentProgress.completedLessonIds.length}/{CURRICULUM_LESSONS.length})
+              </span>
+            </div>
+
+            <button
+              onClick={() => setIsCurriculumCollapsed(false)}
+              className="p-1 rounded text-slate-400 hover:text-slate-700 cursor-pointer"
+              title="Expand Curriculum Panel"
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
 
         {/* Center Panel: Dual Mode (Visual Circuit Builder vs Monaco Code Editor) */}
-        <div className="flex-1 flex flex-col border-r border-slate-200 overflow-hidden">
+        <div className="flex-1 min-w-0 flex flex-col border-r border-slate-200 overflow-hidden">
           {/* Center Panel Header Tabs */}
-          <div className="h-10 bg-slate-50 border-b border-slate-200 px-3 flex items-center justify-between">
+          <div className="h-10 bg-slate-50 border-b border-slate-200 px-3 flex items-center justify-between flex-shrink-0">
             <div className="flex items-center space-x-1 bg-slate-200/60 p-1 rounded-lg border border-slate-200">
               <button
                 onClick={() => setCenterTab('visual')}
-                className={`flex items-center space-x-1.5 px-3 py-1 rounded text-xs font-semibold transition-all ${
+                className={`flex items-center space-x-1.5 px-3 py-1 rounded text-xs font-semibold transition-all cursor-pointer ${
                   centerTab === 'visual'
                     ? 'bg-blue-600 text-white font-bold shadow-sm'
                     : 'text-slate-600 hover:text-slate-900'
@@ -269,7 +284,7 @@ const WorkspaceLayout: React.FC = () => {
 
               <button
                 onClick={() => setCenterTab('code')}
-                className={`flex items-center space-x-1.5 px-3 py-1 rounded text-xs font-semibold transition-all ${
+                className={`flex items-center space-x-1.5 px-3 py-1 rounded text-xs font-semibold transition-all cursor-pointer ${
                   centerTab === 'code'
                     ? 'bg-indigo-600 text-white font-bold shadow-sm'
                     : 'text-slate-600 hover:text-slate-900'
@@ -278,6 +293,10 @@ const WorkspaceLayout: React.FC = () => {
                 <Code2 className="w-3.5 h-3.5" />
                 <span>Monaco Code Editor</span>
               </button>
+            </div>
+
+            <div className="flex items-center space-x-2 text-xs font-mono text-slate-500">
+              <span className="hidden md:inline">Grid: {qubitCount}q × {stepCount}steps</span>
             </div>
           </div>
 
@@ -291,44 +310,186 @@ const WorkspaceLayout: React.FC = () => {
         </div>
 
         {/* Right Panel: Real-Time Quantum Visualization Space */}
-        <div id="visualizer-panel" className="w-[360px] flex-shrink-0 flex flex-col bg-slate-50 border-l border-slate-200 overflow-hidden">
-          <div className="h-10 flex-shrink-0 px-3 bg-white border-b border-slate-200 flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700">Quantum preview</span>
-            <span className="text-[10px] text-slate-500">Live state</span>
+        {!isRightPanelCollapsed ? (
+          <div id="visualizer-panel" className="w-[360px] flex-shrink-0 flex flex-col bg-slate-50 border-l border-slate-200 overflow-hidden transition-all duration-200 ease-in-out">
+            <div className="h-10 flex-shrink-0 px-2.5 bg-white border-b border-slate-200 flex items-center justify-between">
+              {/* Tabs for Preview */}
+              <div className="flex items-center space-x-0.5 bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+                <button
+                  onClick={() => setPreviewTab('3d')}
+                  className={`flex items-center space-x-1 px-2 py-1 rounded text-[11px] font-semibold transition-all cursor-pointer ${
+                    previewTab === '3d'
+                      ? 'bg-white text-blue-600 border border-slate-200 shadow-xs font-bold'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                  title="3D Bloch Sphere & Qosphere Visualizers"
+                >
+                  <Globe className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">3D View</span>
+                </button>
+
+                <button
+                  onClick={() => setPreviewTab('probabilities')}
+                  className={`flex items-center space-x-1 px-2 py-1 rounded text-[11px] font-semibold transition-all cursor-pointer ${
+                    previewTab === 'probabilities'
+                      ? 'bg-white text-blue-600 border border-slate-200 shadow-xs font-bold'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                  title="Measurement Probabilities Distribution"
+                >
+                  <BarChart2 className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Probabilities</span>
+                </button>
+
+                <button
+                  onClick={() => setPreviewTab('statevector')}
+                  className={`flex items-center space-x-1 px-2 py-1 rounded text-[11px] font-semibold transition-all cursor-pointer ${
+                    previewTab === 'statevector'
+                      ? 'bg-white text-indigo-600 border border-slate-200 shadow-xs font-bold'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                  title="State Vector & Amplitude Matrix"
+                >
+                  <Binary className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Amplitudes</span>
+                </button>
+
+                <button
+                  onClick={() => setPreviewTab('all')}
+                  className={`flex items-center space-x-1 px-2 py-1 rounded text-[11px] font-semibold transition-all cursor-pointer ${
+                    previewTab === 'all'
+                      ? 'bg-white text-slate-900 border border-slate-200 shadow-xs font-bold'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                  title="Stacked Overview (Scrollable)"
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">All</span>
+                </button>
+              </div>
+
+              <button
+                onClick={() => setIsRightPanelCollapsed(true)}
+                className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer ml-1"
+                title="Collapse Quantum Preview"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Tab Content */}
+            {previewTab === '3d' && (
+              <div className="flex-1 flex flex-col overflow-hidden">
+                {/* Visualizer Mode Selector Switcher */}
+                <div className="p-1.5 bg-slate-100 border-b border-slate-200 flex items-center justify-center space-x-1 flex-shrink-0">
+                  <button
+                    onClick={() => setVisualizerMode('bloch')}
+                    className={`flex items-center space-x-1.5 px-3 py-1 rounded text-[11px] font-semibold transition-all cursor-pointer ${
+                      visualizerMode === 'bloch'
+                        ? 'bg-white text-blue-600 border border-slate-200 shadow-xs font-bold'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Globe className="w-3.5 h-3.5 text-blue-600" />
+                    <span>3D Bloch Sphere</span>
+                  </button>
+
+                  <button
+                    onClick={() => setVisualizerMode('qosphere')}
+                    className={`flex items-center space-x-1.5 px-3 py-1 rounded text-[11px] font-semibold transition-all cursor-pointer ${
+                      visualizerMode === 'qosphere'
+                        ? 'bg-white text-indigo-600 border border-slate-200 shadow-xs font-bold'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Network className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Qosphere Entanglement</span>
+                  </button>
+                </div>
+
+                {/* Render Active Visualizer in Full Height */}
+                <div className="flex-1 overflow-hidden">
+                  {visualizerMode === 'bloch' ? (
+                    <BlochSphere3D className="h-full flex-1" />
+                  ) : (
+                    <QosphereVisualizer className="h-full flex-1" />
+                  )}
+                </div>
+              </div>
+            )}
+
+            {previewTab === 'probabilities' && (
+              <div className="flex-1 flex flex-col overflow-hidden">
+                <ProbabilitiesChart className="h-full flex-1" />
+              </div>
+            )}
+
+            {previewTab === 'statevector' && (
+              <div className="flex-1 flex flex-col overflow-hidden">
+                <StateVectorMatrix className="h-full flex-1 flex flex-col" />
+              </div>
+            )}
+
+            {previewTab === 'all' && (
+              <div className="flex-1 overflow-y-auto">
+                <div className="p-1.5 bg-slate-100 border-b border-slate-200 flex items-center justify-center space-x-1 sticky top-0 z-10">
+                  <button
+                    onClick={() => setVisualizerMode('bloch')}
+                    className={`flex items-center space-x-1.5 px-3 py-1 rounded text-[11px] font-semibold transition-all cursor-pointer ${
+                      visualizerMode === 'bloch'
+                        ? 'bg-white text-blue-600 border border-slate-200 shadow-xs font-bold'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Globe className="w-3.5 h-3.5 text-blue-600" />
+                    <span>3D Bloch Sphere</span>
+                  </button>
+
+                  <button
+                    onClick={() => setVisualizerMode('qosphere')}
+                    className={`flex items-center space-x-1.5 px-3 py-1 rounded text-[11px] font-semibold transition-all cursor-pointer ${
+                      visualizerMode === 'qosphere'
+                        ? 'bg-white text-indigo-600 border border-slate-200 shadow-xs font-bold'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Network className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Qosphere Entanglement</span>
+                  </button>
+                </div>
+
+                {visualizerMode === 'bloch' ? <BlochSphere3D /> : <QosphereVisualizer />}
+                <ProbabilitiesChart />
+                <StateVectorMatrix />
+              </div>
+            )}
           </div>
-          {/* Visualizer Mode Selector Switcher */}
-          <div className="p-1.5 bg-slate-100 border-b border-slate-200 flex items-center justify-center space-x-1">
+        ) : (
+          <div className="w-10 flex-shrink-0 bg-slate-50 border-l border-slate-200 flex flex-col items-center py-2.5 justify-between transition-all duration-200 ease-in-out select-none">
             <button
-              onClick={() => setVisualizerMode('bloch')}
-              className={`flex items-center space-x-1.5 px-3 py-1 rounded text-[11px] font-semibold transition-all ${
-                visualizerMode === 'bloch'
-                  ? 'bg-white text-blue-600 border border-slate-200 shadow-sm font-bold'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
+              onClick={() => setIsRightPanelCollapsed(false)}
+              className="p-1.5 rounded-lg bg-white hover:bg-blue-50 text-blue-600 border border-slate-200 shadow-xs cursor-pointer transition-colors"
+              title="Expand Quantum Preview Panel"
             >
-              <Globe className="w-3.5 h-3.5 text-blue-600" />
-              <span>3D Bloch Sphere</span>
+              <ChevronLeft className="w-4 h-4" />
             </button>
 
+            <div className="flex flex-col items-center gap-3 my-auto py-4">
+              <Globe className="w-4 h-4 text-blue-600" />
+              <span className="text-[10px] font-bold text-slate-500 tracking-wider [writing-mode:vertical-lr] uppercase">
+                Preview
+              </span>
+            </div>
+
             <button
-              onClick={() => setVisualizerMode('qosphere')}
-              className={`flex items-center space-x-1.5 px-3 py-1 rounded text-[11px] font-semibold transition-all ${
-                visualizerMode === 'qosphere'
-                  ? 'bg-white text-indigo-600 border border-slate-200 shadow-sm font-bold'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
+              onClick={() => setIsRightPanelCollapsed(false)}
+              className="p-1 rounded text-slate-400 hover:text-slate-700 cursor-pointer"
+              title="Expand Quantum Preview Panel"
             >
-              <Network className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Qosphere Entanglement</span>
+              <ChevronLeft className="w-3.5 h-3.5" />
             </button>
           </div>
-
-          {/* Render Active Visualizer */}
-          {visualizerMode === 'bloch' ? <BlochSphere3D /> : <QosphereVisualizer />}
-          
-          <ProbabilitiesChart />
-          <StateVectorMatrix />
-        </div>
+        )}
       </div>
 
       {/* Bottom Panel: Execution Logs, Terminal & QASM */}

@@ -3,7 +3,11 @@ import { useQuantum } from '../../context/QuantumContext';
 import { calculateQosphereNodes } from '../../utils/quantumSimulator';
 import { Network, Sparkles } from 'lucide-react';
 
-export const QosphereVisualizer: React.FC = () => {
+interface QosphereVisualizerProps {
+  className?: string;
+}
+
+export const QosphereVisualizer: React.FC<QosphereVisualizerProps> = ({ className = 'h-64' }) => {
   const { simulationResult, qubitCount } = useQuantum();
 
   const stateVector = simulationResult?.stateVector || [
@@ -20,7 +24,7 @@ export const QosphereVisualizer: React.FC = () => {
   };
 
   return (
-    <div className="h-64 flex flex-col bg-quantum-panel/90 border-b border-quantum-border overflow-hidden relative">
+    <div className={`${className} flex flex-col bg-quantum-panel/90 border-b border-quantum-border overflow-hidden relative`}>
       {/* Header Bar */}
       <div className="p-2.5 bg-quantum-dark/95 border-b border-quantum-border flex items-center justify-between z-10">
         <div className="flex items-center space-x-2 text-xs font-semibold text-quantum-magenta">
