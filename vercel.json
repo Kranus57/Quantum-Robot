@@ -7,7 +7,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://qlearn-api.onrender.com/api/$1"
+      "destination": "https://qlearning-72cw.onrender.com/api/$1"
     },
     {
       "source": "/(.*)",
