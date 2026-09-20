@@ -19,12 +19,38 @@ from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-# Database URL: Supports PostgreSQL via POSTGRES_URL or DATABASE_URL, defaults to SQLite
-raw_db_url = os.getenv("POSTGRES_URL") or os.getenv("DATABASE_URL") or "sqlite:///./quantum_edu.db"
+from urllib.parse import quote_plus
 
-# Fix SQLAlchemy compatibility for postgres:// URLs (Heroku / Supabase / Render)
-if raw_db_url.startswith("postgres://"):
-    raw_db_url = raw_db_url.replace("postgres://", "postgresql://", 1)
+def sanitize_db_url(url: str) -> str:
+    """Sanitize database URL by URL-encoding special characters in password and validating scheme."""
+    if not url:
+        return "sqlite:///./quantum_edu.db"
+    url = url.strip()
+    # Guard against accidental HTTP(S) Supabase project endpoints
+    if url.startswith("https://") or url.startswith("http://"):
+        return "sqlite:///./quantum_edu.db"
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql://", 1)
+    # If password has unencoded '@', extract and URL-encode it
+    if "://" in url and "@" in url:
+        prefix, rest = url.split("://", 1)
+        at_index = rest.rfind("@")
+        if at_index != -1:
+            userpass = rest[:at_index]
+            host_and_rest = rest[at_index + 1:]
+            if ":" in userpass:
+                user, password = userpass.split(":", 1)
+                if "@" in password and "%40" not in password:
+                    password = quote_plus(password)
+                url = f"{prefix}://{user}:{password}@{host_and_rest}"
+    return url
+
+# Database URL: Supports PostgreSQL via POSTGRES_URL or DATABASE_URL, defaults to SQLite
+raw_candidate = os.getenv("POSTGRES_URL") or os.getenv("DATABASE_URL") or "sqlite:///./quantum_edu.db"
+if raw_candidate.startswith("http://") or raw_candidate.startswith("https://"):
+    raw_candidate = os.getenv("POSTGRES_URL") or "sqlite:///./quantum_edu.db"
+
+raw_db_url = sanitize_db_url(raw_candidate)
 
 # Cloud safety check: If deployed on Render and URL points to local machine (localhost), fallback to SQLite
 if os.getenv("RENDER") and ("localhost" in raw_db_url or "127.0.0.1" in raw_db_url):
