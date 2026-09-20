@@ -26,6 +26,11 @@ raw_db_url = os.getenv("POSTGRES_URL") or os.getenv("DATABASE_URL") or "sqlite:/
 if raw_db_url.startswith("postgres://"):
     raw_db_url = raw_db_url.replace("postgres://", "postgresql://", 1)
 
+# Cloud safety check: If deployed on Render and URL points to local machine (localhost), fallback to SQLite
+if os.getenv("RENDER") and ("localhost" in raw_db_url or "127.0.0.1" in raw_db_url):
+    print("Notice: Detected 'localhost' database on cloud environment (Render). Falling back to SQLite.")
+    raw_db_url = "sqlite:///./quantum_edu.db"
+
 DATABASE_URL = raw_db_url
 is_sqlite = DATABASE_URL.startswith("sqlite")
 
@@ -86,9 +91,19 @@ def auto_migrate_schema():
         print(f"Auto-migration note: {e}")
 
 def init_db():
-    """Initialize database tables and run schema auto-migrations"""
-    Base.metadata.create_all(bind=engine)
-    auto_migrate_schema()
+    """Initialize database tables and run schema auto-migrations with fallback"""
+    global engine, SessionLocal, DATABASE_URL, is_sqlite
+    try:
+        Base.metadata.create_all(bind=engine)
+        auto_migrate_schema()
+    except Exception as err:
+        print(f"Warning: Primary database connection failed ({err}). Falling back to SQLite...")
+        DATABASE_URL = "sqlite:///./quantum_edu.db"
+        is_sqlite = True
+        engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+        SessionLocal.configure(bind=engine)
+        Base.metadata.create_all(bind=engine)
+        auto_migrate_schema()
 
 def get_db():
     """FastAPI Dependency for SQLAlchemy session handling"""
