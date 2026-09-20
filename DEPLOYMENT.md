@@ -1,58 +1,53 @@
-# Deploying QLearn (Render + Vercel)
+# Deploying QLearn (Render + Vercel + Supabase)
 
-This project is configured for cloud deployment under the project name **`qlearn`** using **Render** for the Python FastAPI backend and **Vercel** for the React Vite frontend.
+### 🌐 Live Production Endpoints
+- **Frontend App:** [https://quantumlearn-ivory.vercel.app](https://quantumlearn-ivory.vercel.app)
+- **Backend API:** [https://qlearning-72cw.onrender.com](https://qlearning-72cw.onrender.com)
+- **Interactive Swagger Docs:** [https://qlearning-72cw.onrender.com/docs](https://qlearning-72cw.onrender.com/docs)
+
+---
+
+## Architecture Overview
+- **Frontend:** Hosted on **Vercel** (`dist/` build output from Vite).
+- **Backend:** Hosted on **Render** (Python FastAPI with Qiskit, Cirq, PennyLane).
+- **API Proxy:** `vercel.json` automatically rewrites all `/api/*` requests directly to `https://qlearning-72cw.onrender.com/api/$1`.
+- **Database:** Hosted on **Supabase** (PostgreSQL) with auto-migration and SQLite fallback.
 
 ---
 
 ## Step 1: Push Changes to GitHub
 
-Commit the deployment configuration files to your repository:
+Commit your changes and push to `origin main`:
 
 ```powershell
 git add .
-git commit -m "Configure QLearn deployment for Render and Vercel"
+git commit -m "Update deployment and configuration"
 git push origin main
 ```
 
 ---
 
-## Step 2: Deploy Backend to Render (Name: `qlearn-api`)
+## Step 2: Backend Configuration on Render
 
-1. Go to **[dashboard.render.com](https://dashboard.render.com/)** and sign in.
-2. Click **New +** → **Web Service** (or **Blueprint** to use `render.yaml` automatically).
-3. Connect your GitHub repository: `Kranus57/Quantum-Robot`.
-4. Configure the Web Service:
-   - **Name:** `qlearn-api`
-   - **Language / Runtime:** `Python 3`
-   - **Branch:** `main`
-   - **Build Command:** `pip install -r backend/requirements.txt`
-   - **Start Command:** `uvicorn backend.main:app --host 0.0.0.0 --port $PORT`
-   - **Plan:** Free
-5. **Environment Variables** (under *Advanced* or *Environment* tab):
-   - `PYTHON_VERSION`: `3.10.12`
-   - `DATABASE_URL`: `sqlite:///./quantum_edu.db` (or a PostgreSQL connection string)
-   - *(Optional)* `GEMINI_API_KEY`, `GROQ_API_KEY`, or `OPENAI_API_KEY` for AI tutoring.
-6. Click **Create Web Service**.
-7. Once deployed, copy your backend URL (e.g., `https://qlearn-api.onrender.com`).
+- **Service Name:** `qlearning-72cw`
+- **Build Command:** `python -m pip install --upgrade pip && pip install -r requirements.txt`
+- **Start Command:** `uvicorn main:app --host 0.0.0.0 --port $PORT`
+- **Environment Variables:**
+  - `PYTHON_VERSION`: `3.11.9`
+  - `DATABASE_URL`: `postgresql://postgres:Mousam%402026@db.wrvwhfvntcslzobnujfe.supabase.co:5432/postgres`
+  - `CORS_ORIGINS`: `*`
+  - *(Optional)* AI Keys: `GROQ_API_KEY`, `GEMINI_API_KEY`, or `OPENAI_API_KEY`
 
 ---
 
-## Step 3: Deploy Frontend to Vercel (Name: `qlearn`)
+## Step 3: Frontend Deployment on Vercel
 
-1. Go to **[vercel.com/new](https://vercel.com/new)** and sign in.
-2. Under **Import Git Repository**, select `Quantum-Robot`.
-3. Configure the project:
-   - **Project Name:** `qlearn`
-   - **Framework Preset:** `Vite`
-   - **Root Directory:** `./`
-   - **Build Command:** `npm run build`
-   - **Output Directory:** `dist`
-4. **API Proxy Route (`vercel.json`)**:
-   - The included `vercel.json` automatically proxies `/api/*` calls to `https://qlearn-api.onrender.com/api/*`.
-   - If your Render URL has a different domain name, update the destination in `vercel.json` or add `VITE_API_URL` as an environment variable in Vercel.
-5. Click **Deploy**.
-
-Your frontend will be live at `https://qlearn.vercel.app` (or your chosen custom domain).
+- **Project Name:** `quantumlearn-ivory`
+- **Framework:** `Vite`
+- **Root Directory:** `./`
+- **Build Command:** `npm run build`
+- **Output Directory:** `dist`
+- **Proxy Configuration:** Managed via `vercel.json` pointing to `https://qlearning-72cw.onrender.com/api/$1`.
 
 ---
 

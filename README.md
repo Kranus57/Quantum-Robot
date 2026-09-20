@@ -1,6 +1,16 @@
-# Quantum Robot
+# Quantum Robot (QLearn)
+
+[![Frontend on Vercel](https://img.shields.io/badge/Frontend-Vercel-black?style=for-the-badge&logo=vercel)](https://quantumlearn-ivory.vercel.app/)
+[![Backend on Render](https://img.shields.io/badge/Backend-Render-46E3B7?style=for-the-badge&logo=render)](https://qlearning-72cw.onrender.com/)
+[![Database Supabase](https://img.shields.io/badge/Database-Supabase%20PostgreSQL-3ECF8E?style=for-the-badge&logo=supabase)](https://supabase.com)
 
 Quantum Robot is an interactive quantum-computing education platform. It combines lessons, visual circuit building, quantum-state visualizations, AI tutoring, assessments, authentication, and multiplayer collaboration in one web application.
+
+### 🌐 Live Production Links
+- **Interactive Web App:** [https://quantumlearn-ivory.vercel.app](https://quantumlearn-ivory.vercel.app)
+- **Backend API:** [https://qlearning-72cw.onrender.com](https://qlearning-72cw.onrender.com)
+- **Interactive Swagger API Docs:** [https://qlearning-72cw.onrender.com/docs](https://qlearning-72cw.onrender.com/docs)
+
 
 ## Tech Stack
 
